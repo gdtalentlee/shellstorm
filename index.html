@@ -1,0 +1,1693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>弹壳风暴</title>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#171c20;
+  --panel:#222a30;
+  --panel-2:#2c363e;
+  --line:#3a4651;
+  --text:#eef2f4;
+  --muted:#93a1ab;
+  --brass:#e8b330;
+  --brass-dark:#a87b12;
+  --blood:#e5533d;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+  font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+  overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#probe{position:fixed;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+
+.ov{position:fixed;inset:0;display:none;background:rgba(10,13,16,.86);overflow:auto;touch-action:pan-y;
+  padding:calc(env(safe-area-inset-top,0px) + 18px) 16px calc(env(safe-area-inset-bottom,0px) + 18px)}
+.ov.show{display:flex}
+.ov>.box{margin:auto;width:100%;max-width:520px;text-align:center}
+
+h1{margin:0 0 4px;font-size:44px;letter-spacing:.06em;font-weight:900;color:var(--brass);
+  text-shadow:0 3px 0 var(--brass-dark),0 8px 24px rgba(232,179,48,.25)}
+.sub{color:var(--muted);font-size:14px;margin:0 0 22px}
+h2{margin:0 0 6px;font-size:28px;font-weight:800}
+.hint{color:var(--muted);font-size:13px;line-height:1.7;margin:16px 0 0}
+
+.chars{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.ch{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:12px 6px 10px;color:var(--text);
+  font:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px}
+.ch .av{width:46px;height:46px;border-radius:50%;border:3px solid rgba(0,0,0,.35);margin-bottom:4px}
+.ch b{font-size:15px}
+.ch .role{font-size:12px;color:var(--brass)}
+.ch .d{font-size:11px;color:var(--muted);line-height:1.4}
+.ch.sel{border-color:var(--brass);background:var(--panel-2);box-shadow:0 0 0 3px rgba(232,179,48,.18)}
+
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:16px;font:inherit;font-size:18px;font-weight:800;
+  background:var(--brass);color:#2a1f00;cursor:pointer;box-shadow:0 5px 0 var(--brass-dark)}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--brass-dark)}
+.btn.alt{background:var(--panel-2);color:var(--text);box-shadow:0 5px 0 #161c21;margin-top:14px;font-size:16px}
+.btn.alt:active{box-shadow:0 2px 0 #161c21}
+.best{margin-top:14px;color:var(--muted);font-size:13px}
+
+.cards{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.card{display:flex;align-items:center;gap:12px;text-align:left;background:var(--panel);border:2px solid var(--line);
+  border-radius:14px;padding:12px 14px;color:var(--text);font:inherit;cursor:pointer;width:100%}
+.card:active{border-color:var(--brass);background:var(--panel-2)}
+.card .ic{font-size:30px;width:44px;text-align:center;flex:none}
+.card .tx{flex:1;display:flex;flex-direction:column;gap:3px}
+.card .tx b{font-size:16px}
+.card .tx i{font-style:normal;font-size:13px;color:var(--muted)}
+.card .lv{font-size:12px;color:var(--brass);flex:none}
+.owned{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:16px;color:var(--muted);font-size:12px}
+.owned span{background:var(--panel);border-radius:8px;padding:3px 8px}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0 20px}
+.stats div{background:var(--panel);border-radius:12px;padding:12px 4px}
+.stats b{display:block;font-size:22px;color:var(--brass)}
+.stats span{font-size:12px;color:var(--muted)}
+
+.wallet{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:2px solid var(--line);
+  border-radius:999px;padding:6px 16px;font-weight:800;color:var(--brass);margin-bottom:16px}
+.ch.lock .av{filter:grayscale(1) brightness(.6)}
+.ch .cost{font-size:12px;color:var(--brass);font-weight:700}
+.shop-list{display:flex;flex-direction:column;gap:10px;margin:6px 0 18px}
+.item{display:flex;align-items:center;gap:12px;background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:10px 12px;text-align:left}
+.item .ic{font-size:26px;width:38px;text-align:center;flex:none}
+.item .tx{flex:1;min-width:0}
+.item .tx b{font-size:15px;display:block}
+.item .tx b small{color:var(--muted);font-weight:500;font-size:12px;margin-left:4px}
+.item .tx i{font-style:normal;font-size:12px;color:var(--muted);display:block;margin:2px 0 6px}
+.pips{display:flex;gap:3px;flex-wrap:wrap}
+.pips u{width:12px;height:5px;border-radius:2px;background:var(--line);text-decoration:none}
+.pips u.on{background:var(--brass)}
+.buy{flex:none;min-width:80px;border:0;border-radius:10px;padding:10px 8px;font:inherit;font-weight:800;font-size:14px;
+  background:var(--brass);color:#2a1f00;cursor:pointer;box-shadow:0 3px 0 var(--brass-dark);text-align:center}
+.buy:active{transform:translateY(2px);box-shadow:0 1px 0 var(--brass-dark)}
+.buy.off{background:var(--panel-2);color:var(--muted);box-shadow:0 3px 0 #161c21}
+.buy.max{background:transparent;color:var(--brass);box-shadow:none}
+.code{width:100%;background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:14px;color:var(--text);
+  font:inherit;font-size:18px;font-weight:700;text-align:center;letter-spacing:.08em;text-transform:uppercase;
+  -webkit-user-select:text;user-select:text;outline:none;margin-bottom:10px}
+.code:focus{border-color:var(--brass)}
+.msg{min-height:22px;font-size:14px;margin:0 0 14px}
+.msg.ok{color:#6bdc7c}
+.msg.bad{color:var(--blood)}
+.row2{display:flex;gap:10px;margin-top:16px}
+.row2 .btn{margin-top:0;flex:1}
+.row2 .btn.alt{flex:0 0 38%}
+.upbtn{position:fixed;z-index:4;right:calc(env(safe-area-inset-right,0px) + 14px);bottom:calc(env(safe-area-inset-bottom,0px) + 30px);
+  display:none;width:76px;height:76px;border-radius:50%;border:3px solid rgba(255,255,255,.18);background:rgba(20,26,31,.72);
+  color:var(--muted);font:inherit;font-weight:800;font-size:13px;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;padding:0;touch-action:manipulation}
+.upbtn.show{display:flex}
+.upbtn b{font-size:26px;line-height:1.1}
+.upbtn em{position:absolute;top:-7px;right:-7px;min-width:26px;height:26px;border-radius:13px;background:var(--blood);color:#fff;
+  font-style:normal;font-size:14px;line-height:26px;text-align:center;padding:0 7px;display:none;border:2px solid var(--bg)}
+.upbtn.ready{background:var(--brass);color:#2a1f00;border-color:#fff3b0;animation:pulse 1s ease-in-out infinite}
+.upbtn.ready em{display:block}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}
+.ch{position:relative}
+.lvb{position:absolute;top:6px;right:6px;background:var(--brass);color:#2a1f00;border-radius:8px;font-size:11px;font-weight:800;padding:1px 6px}
+.cinfo{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:12px 14px;margin:-6px 0 16px;text-align:left}
+.cinfo .top{display:flex;align-items:center;justify-content:space-between;font-weight:800;margin-bottom:6px}
+.cinfo .top small{color:var(--muted);font-weight:500;font-size:12px}
+.xpbar{height:8px;border-radius:4px;background:var(--panel-2);overflow:hidden;margin-bottom:6px}
+.xpbar i{display:block;height:100%;background:var(--brass)}
+.cline{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+.cline>span:first-child{font-size:20px;width:26px;text-align:center;flex:none}
+.cline .tx{flex:1;min-width:0}
+.cline .tx b{display:block;font-size:14px}
+.cline .tx i{font-style:normal;color:var(--muted);font-size:12px}
+.mini{flex:none;border:0;border-radius:8px;padding:7px 10px;font:inherit;font-weight:800;font-size:12px;background:var(--brass);color:#2a1f00;cursor:pointer}
+.mini.off{background:var(--panel-2);color:var(--muted)}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.mgrid .btn{margin-top:0;font-size:15px;padding:13px 8px}
+.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+.slot{background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:8px 3px;color:var(--text);font:inherit;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:3px;min-height:78px}
+.slot.on{border-color:var(--brass)}
+.slot .ic{font-size:22px}
+.slot .nm{font-size:11px;line-height:1.25;word-break:break-all}
+.slot .lb{font-size:10px;color:var(--muted)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:10px}
+.chip{border:2px solid var(--line);background:var(--panel);color:var(--muted);border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;cursor:pointer}
+.chip.on{border-color:var(--brass);color:var(--brass)}
+.irow{display:flex;align-items:center;gap:10px;background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:9px 12px;
+  text-align:left;width:100%;color:var(--text);font:inherit;cursor:pointer;margin-bottom:8px}
+.irow .ic{font-size:24px;width:34px;text-align:center;flex:none}
+.irow .tx{flex:1;min-width:0}
+.irow .tx b{display:block;font-size:14px}
+.irow .tx i{font-style:normal;font-size:12px;color:var(--muted)}
+.irow .tg{font-size:11px;color:var(--brass);flex:none}
+.sockets{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:8px 0 14px}
+.sock{width:56px;height:56px;border-radius:12px;border:2px dashed var(--line);background:var(--panel);color:var(--muted);font:inherit;font-size:22px;
+  cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;line-height:1.1}
+.sock small{font-size:10px}
+.sock.full{border-style:solid;border-color:var(--brass);color:var(--text)}
+.dtl{background:var(--panel);border-radius:14px;padding:12px 14px;text-align:left;margin:12px 0;font-size:14px;line-height:1.8}
+.sec{margin:16px 0 6px;font-weight:800;text-align:left;color:var(--brass);font-size:14px}
+.gbtns{display:flex;gap:6px;flex:none}
+.skbtn{right:calc(env(safe-area-inset-right,0px) + 102px)}
+.skbtn.cool{opacity:.7;animation:none}
+.gain{font-size:22px;font-weight:900;color:var(--brass);margin:14px 0 0}
+.tools{position:fixed;z-index:5;right:calc(env(safe-area-inset-right,0px) + 10px);top:calc(env(safe-area-inset-top,0px) + 16px);display:none;gap:8px}
+.tools.show{display:flex}
+.tools button{width:40px;height:40px;border-radius:50%;border:2px solid rgba(255,255,255,.18);background:rgba(20,26,31,.65);
+  color:var(--text);font-size:17px;cursor:pointer;padding:0}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="probe"></div>
+
+<button class="upbtn skbtn" id="skbtn" aria-label="技能"><b id="skIcon">✨</b><span id="skTxt">技能</span></button>
+<button class="upbtn" id="upbtn" aria-label="强化"><b>⬆</b><span>强化</span><em id="upBadge">0</em></button>
+
+<div class="tools" id="tools">
+  <button id="btnSnd" aria-label="音效开关">🔊</button>
+  <button id="btnPause" aria-label="暂停">⏸</button>
+</div>
+
+<div class="ov show" id="menu"><div class="box">
+  <h1>弹壳风暴</h1>
+  <p class="sub">自动开火 · 只管走位 · 一路割草</p>
+  <div class="wallet">🪙 <span id="gold">0</span></div>
+  <div class="chars" id="chars"></div>
+  <div class="cinfo" id="charInfo"></div>
+  <button class="btn" id="btnStart">开始作战</button>
+  <div class="mgrid">
+    <button class="btn alt" id="btnBag">🎒 装备</button>
+    <button class="btn alt" id="btnStore">📦 补给站</button>
+    <button class="btn alt" id="btnShop">🔧 强化工坊</button>
+    <button class="btn alt" id="btnCode">🎟 兑换码</button>
+  </div>
+  <div class="best" id="best"></div>
+  <p class="hint">手机：按住屏幕任意位置拖动，出现摇杆<br>电脑：WASD / 方向键移动，Esc 暂停<br>角色会自动瞄准最近的敌人</p>
+</div></div>
+
+<div class="ov" id="levelup"><div class="box">
+  <h2>强化 · Lv.<span id="lvnum">2</span></h2>
+  <div class="sub" style="margin:0" id="lvSub">选一项强化</div>
+  <div class="cards" id="cards"></div>
+  <div class="row2"><button class="btn" id="btnAuto">一键升级</button><button class="btn alt" id="btnLater">稍后再选</button></div>
+  <div class="owned" id="owned"></div>
+</div></div>
+
+<div class="ov" id="shop"><div class="box">
+  <h2>强化工坊</h2>
+  <div class="wallet">🪙 <span id="gold2">0</span></div>
+  <div class="shop-list" id="shopList"></div>
+  <button class="btn" id="btnShopBack">返回</button>
+  <p class="hint">永久强化，之后每一局都生效</p>
+</div></div>
+
+<div class="ov" id="redeem"><div class="box">
+  <h2>兑换码</h2>
+  <div class="wallet">🪙 <span id="gold3">0</span></div>
+  <input id="codeInput" class="code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" placeholder="输入兑换码">
+  <div class="msg" id="codeMsg"></div>
+  <button class="btn" id="btnRedeem">兑换</button>
+  <button class="btn alt" id="btnRedeemBack">返回</button>
+</div></div>
+
+<div class="ov" id="bag"><div class="box" id="bagBox"></div></div>
+<div class="ov" id="store"><div class="box" id="storeBox"></div></div>
+
+<div class="ov" id="pause"><div class="box">
+  <h2>已暂停</h2>
+  <button class="btn" id="btnResume" style="margin-top:18px">继续战斗</button>
+  <button class="btn alt" id="btnQuit">放弃本局，回主菜单</button>
+</div></div>
+
+<div class="ov" id="over"><div class="box">
+  <h2 style="color:var(--blood)">你倒下了</h2>
+  <div class="sub" id="overNote" style="margin:0"></div>
+  <div class="stats">
+    <div><b id="sTime">0:00</b><span>存活时间</span></div>
+    <div><b id="sKills">0</b><span>击杀</span></div>
+    <div><b id="sLvl">1</b><span>等级</span></div>
+  </div>
+  <div class="gain" id="overGold"></div>
+  <div class="dtl" id="overExtra" style="margin:14px 0 0"></div>
+  <button class="btn" id="btnRetry" style="margin-top:18px">再来一局</button>
+  <div class="mgrid">
+    <button class="btn alt" id="btnShopOver">🔧 强化工坊</button>
+    <button class="btn alt" id="btnBagOver">🎒 装备</button>
+    <button class="btn alt" id="btnStoreOver">📦 补给站</button>
+    <button class="btn alt" id="btnMenu">回主菜单</button>
+  </div>
+</div></div>
+
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const TAU=Math.PI*2;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const fmt=s=>{s=Math.floor(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+
+/* ---------- canvas ---------- */
+const cv=$('c'),ctx=cv.getContext('2d');
+let W=0,H=0,DPR=1,Z=1,VW=0,VH=0,safeT=0;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth;H=window.innerHeight;
+  cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);
+  Z=clamp(Math.min(W,H)/520,.62,1.5);
+  VW=W/Z;VH=H/Z;
+  const cs=getComputedStyle($('probe'));
+  safeT=parseFloat(cs.paddingTop)||0;
+}
+window.addEventListener('resize',resize);resize();
+
+/* ---------- storage ---------- */
+const SAVE_KEY='shellstorm_save';
+const SAVE={gold:0,up:{},unlock:[true,false,false],best:0,runs:0,
+  chars:[{xp:0},{xp:0},{xp:0}],items:[],gems:{},equip:{weapon:null,helm:null,armor:null,gloves:null,boots:null,neck:null,ring:null,charm:null},nextId:1};
+try{
+  const j=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');
+  if(j&&typeof j==='object'){
+    SAVE.gold=+j.gold||0;SAVE.up=j.up||{};SAVE.best=+j.best||0;SAVE.runs=+j.runs||0;
+    if(Array.isArray(j.unlock))SAVE.unlock=[true,!!j.unlock[1],!!j.unlock[2]];
+    if(Array.isArray(j.chars))for(let i=0;i<3;i++)SAVE.chars[i].xp=+(j.chars[i]&&j.chars[i].xp)||0;
+    if(Array.isArray(j.items))SAVE.items=j.items.filter(it=>it&&typeof it==='object');
+    if(j.gems&&typeof j.gems==='object')SAVE.gems=j.gems;
+    if(j.equip&&typeof j.equip==='object')for(const k of['weapon','helm','armor','gloves','boots','neck','ring','charm'])SAVE.equip[k]=j.equip[k]===undefined?null:j.equip[k];
+    SAVE.nextId=+j.nextId||1;
+  }else{
+    SAVE.best=parseFloat(localStorage.getItem('shellstorm_best')||'0')||0;
+  }
+}catch(e){}
+function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(SAVE))}catch(e){}}
+
+/* ---------- audio ---------- */
+let AC=null,muted=false,lastShot=0,lastKill=0;
+function sfx(f,d,type,v,slide){
+  if(muted)return;
+  try{
+    if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended')AC.resume();
+    const t=AC.currentTime,o=AC.createOscillator(),g=AC.createGain();
+    o.type=type||'square';
+    o.frequency.setValueAtTime(f,t);
+    if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),t+d);
+    g.gain.setValueAtTime(v||.03,t);
+    g.gain.exponentialRampToValueAtTime(.0001,t+d);
+    o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d);
+  }catch(e){}
+}
+
+/* ---------- data ---------- */
+const CHARS=[
+  {name:'雷克斯',role:'突击步枪',desc:'均衡可靠\n中远距离稳定输出',color:'#4cc9f0',hp:100,speed:165,dmg:11,cd:.3,count:1,spread:.05,bspeed:580,life:.75,pierce:0,gl:24,gw:6},
+  {name:'老炮',role:'霰弹枪',desc:'近身霸主\n一发三弹，血厚',color:'#f8961e',hp:125,speed:152,dmg:8,cd:.72,count:3,spread:.17,bspeed:520,life:.5,pierce:0,gl:22,gw:9},
+  {name:'疾风',role:'冲锋枪',desc:'射速狂暴\n跑得快但血薄',color:'#f72585',hp:85,speed:182,dmg:5.5,cd:.12,count:1,spread:.13,bspeed:620,life:.68,pierce:0,gl:20,gw:5}
+];
+const ET={
+  grunt :{r:13,hp:22, speed:58, dmg:7, xp:1,color:'#6bbf59',dark:'#3b7a30'},
+  runner:{r:10,hp:12, speed:108,dmg:5, xp:1,color:'#b983ff',dark:'#6b3fb0'},
+  brute :{r:22,hp:120,speed:44, dmg:15,xp:5,color:'#e5533d',dark:'#8c2515'},
+  boss  :{r:44,hp:2000,speed:50,dmg:26,xp:60,color:'#e8b330',dark:'#8a620a'}
+};
+const UPS=[
+  {id:'dmg',  name:'火力强化',icon:'💥',max:8,desc:'子弹伤害 +20%',apply:p=>p.dmg*=1.2},
+  {id:'rate', name:'速射改装',icon:'⚡',max:8,desc:'射击间隔 -12%',apply:p=>p.cd*=.88},
+  {id:'multi',name:'多重射击',icon:'🔱',max:4,desc:'每次多射出 1 发子弹',apply:p=>{p.count++;p.spread=Math.max(p.spread,.1)}},
+  {id:'pierce',name:'穿甲弹',icon:'🎯',max:4,desc:'子弹额外穿透 1 个敌人',apply:p=>p.pierce++},
+  {id:'speed',name:'疾行战靴',icon:'👟',max:5,desc:'移动速度 +10%',apply:p=>p.speed*=1.1},
+  {id:'hp',   name:'重型护甲',icon:'🛡️',max:6,desc:'最大生命 +25，并回复 25',apply:p=>{p.maxHp+=25;p.hp=Math.min(p.maxHp,p.hp+25)}},
+  {id:'magnet',name:'磁力吸附',icon:'🧲',max:5,desc:'经验拾取范围 +35%',apply:p=>p.pickup*=1.35},
+  {id:'orbit',name:'环绕弹壳',icon:'🌀',max:6,desc:'多一枚环绕身边的弹壳，持续伤敌',apply:p=>p.orbit++},
+  {id:'gren', name:'榴弹发射器',icon:'💣',max:6,desc:'定时投掷手雷，范围爆炸',apply:p=>p.gren++},
+  {id:'regen',name:'战地急救',icon:'💊',max:5,desc:'每秒回复 +0.6 生命',apply:p=>p.regen+=.6},
+  {id:'crit', name:'致命瞄准',icon:'☠️',max:5,desc:'暴击率 +10%，暴击伤害 ×2',apply:p=>p.crit+=.1}
+];
+// 常规强化全部满级后，改为从这些“无限强化”里出选项（可无限叠加）
+const ENDLESS=[
+  {id:'e_dmg',  name:'极限火力',icon:'🔥',desc:'子弹伤害 +10%',apply:p=>p.dmg*=1.1},
+  {id:'e_rate', name:'超频扳机',icon:'⏱️',desc:'射击间隔 -5%',apply:p=>p.cd=Math.max(.05,p.cd*.95)},
+  {id:'e_hp',   name:'超载护甲',icon:'🦾',desc:'最大生命 +30，并回复 30',apply:p=>{p.maxHp+=30;p.hp=Math.min(p.maxHp,p.hp+30)}},
+  {id:'e_speed',name:'肾上腺素',icon:'💨',desc:'移动速度 +3%',apply:p=>p.speed=Math.min(320,p.speed*1.03)},
+  {id:'e_xp',   name:'战场学者',icon:'📚',desc:'经验获取 +10%',apply:p=>p.xpMul=(p.xpMul||1)+.1},
+  {id:'e_crit', name:'致命一击',icon:'💀',desc:'暴击伤害 +25%',apply:p=>p.critMul+=.25}
+];
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+const HEAL={id:'heal',name:'战地补给',icon:'🩹',desc:'立即回复 50% 生命',apply:p=>{p.hp=Math.min(p.maxHp,p.hp+p.maxHp*.5)}};
+/* ---------- 角色等级 / 专属武器 / 专属技能 ---------- */
+const MAXLV=20,EX_W_LV=3,EX_S_LV=5;
+const lvNeed=l=>100+(l-1)*60;
+CHARS[0].ex={name:'脉冲突击步枪',desc:'双发脉冲弹，自带穿透',w:{dmg:13,cd:.26,count:2,spread:.07,bspeed:650,life:.78,pierce:1,gl:28,gw:7}};
+CHARS[0].skill={id:'nova',name:'脉冲新星',icon:'💫',cd:14,desc:'释放冲击波，重创并击退周围敌人'};
+CHARS[1].ex={name:'龙息霰弹炮',desc:'五发火焰弹，命中后爆炸溅射',w:{dmg:9,cd:.8,count:5,spread:.14,bspeed:520,life:.5,pierce:0,gl:26,gw:11,splash:42,splashPct:.5}};
+CHARS[1].skill={id:'iron',name:'钢铁意志',icon:'🛡️',cd:22,desc:'4.5 秒无敌，伤害 +40%，并回复 20% 生命'};
+CHARS[2].ex={name:'追猎冲锋枪',desc:'高速追踪弹，子弹会自动转向敌人',w:{dmg:6.5,cd:.1,count:1,spread:.2,bspeed:560,life:.8,pierce:0,gl:22,gw:6,homing:5}};
+CHARS[2].skill={id:'rage',name:'狂风暴走',icon:'🌪️',cd:20,desc:'6 秒内射速翻倍，移速 +30%'};
+function charInfo(i){
+  let xp=SAVE.chars[i].xp,lv=1;
+  while(lv<MAXLV&&xp>=lvNeed(lv)){xp-=lvNeed(lv);lv++}
+  return{lv,xp,need:lv>=MAXLV?0:lvNeed(lv)};
+}
+
+/* ---------- 装备 / 品质 / 宝石 ---------- */
+const GR=[
+  {n:'普通',c:'#b8c2c9',mult:1,   enh:3, sock:1,cost:50, sell:20},
+  {n:'优秀',c:'#6bdc7c',mult:1.2, enh:5, sock:2,cost:90, sell:60},
+  {n:'精良',c:'#5cc8ff',mult:1.5, enh:7, sock:3,cost:160,sell:180},
+  {n:'史诗',c:'#c58bff',mult:1.9, enh:9, sock:4,cost:300,sell:500},
+  {n:'传说',c:'#ffb347',mult:2.5, enh:12,sock:5,cost:600,sell:1400}
+];
+const SLOTS=['weapon','helm','armor','gloves','boots','neck','ring','charm'];
+const SLOT_N={weapon:'武器',helm:'头盔',armor:'护甲',gloves:'手套',boots:'战靴',neck:'项链',ring:'戒指',charm:'饰品'};
+const SLOT_I={weapon:'🔫',helm:'⛑️',armor:'🦺',gloves:'🧤',boots:'🥾',neck:'🔗',ring:'💍',charm:'📿'};
+const STAT_N={hp:'最大生命',regen:'每秒回血',spd:'移动速度',crit:'暴击率',pickup:'拾取范围',xp:'经验获取',dmg:'伤害',cd:'射击间隔缩短',dr:'受到伤害减免',gold:'金币获取',critd:'暴击伤害'};
+function statText(k,v){
+  if(k==='hp')return'+'+Math.round(v);
+  if(k==='regen')return'+'+v.toFixed(2)+'/秒';
+  return'+'+(v*100).toFixed(1).replace(/\.0$/,'')+'%';
+}
+const TYPES={
+  rifle:  {slot:'weapon',name:'制式步枪',w:{dmg:11,cd:.3, count:1,spread:.05,bspeed:580,life:.75,pierce:0,gl:24,gw:6}},
+  shotgun:{slot:'weapon',name:'战术霰弹枪',w:{dmg:8,cd:.72,count:3,spread:.17,bspeed:520,life:.5, pierce:0,gl:22,gw:9}},
+  smg:    {slot:'weapon',name:'突击冲锋枪',w:{dmg:5.5,cd:.12,count:1,spread:.13,bspeed:620,life:.68,pierce:0,gl:20,gw:5}},
+  sniper: {slot:'weapon',name:'反器材狙击枪',w:{dmg:34,cd:1,count:1,spread:.01,bspeed:900,life:.9,pierce:2,gl:30,gw:5}},
+  revolver:{slot:'weapon',name:'沙漠左轮',w:{dmg:22,cd:.55,count:1,spread:.02,bspeed:700,life:.8,pierce:1,gl:20,gw:7}},
+  lmg:    {slot:'weapon',name:'重型轻机枪',w:{dmg:7.5,cd:.15,count:1,spread:.09,bspeed:600,life:.7,pierce:0,gl:28,gw:8}},
+  helm1:  {slot:'helm',name:'战术头盔',stats:{hp:12,dr:.02}},
+  helm2:  {slot:'helm',name:'夜视头盔',stats:{crit:.03,pickup:.08}},
+  helm3:  {slot:'helm',name:'指挥官军帽',stats:{xp:.05,dmg:.02}},
+  vest:   {slot:'armor',name:'战术背心',stats:{hp:18}},
+  regenarmor:{slot:'armor',name:'再生护甲',stats:{hp:10,regen:.25}},
+  plate:  {slot:'armor',name:'复合装甲',stats:{hp:14,dr:.03}},
+  glove1: {slot:'gloves',name:'射击手套',stats:{cd:.04}},
+  glove2: {slot:'gloves',name:'力量手套',stats:{dmg:.06}},
+  glove3: {slot:'gloves',name:'精准手套',stats:{crit:.03,critd:.1}},
+  boots1: {slot:'boots',name:'疾行战靴',stats:{spd:.05}},
+  boots2: {slot:'boots',name:'磁力战靴',stats:{spd:.03,pickup:.1}},
+  boots3: {slot:'boots',name:'战术跑鞋',stats:{spd:.04,regen:.1}},
+  neck1:  {slot:'neck',name:'守护项链',stats:{hp:14,regen:.15}},
+  neck2:  {slot:'neck',name:'猎手项链',stats:{crit:.03,critd:.15}},
+  ring1:  {slot:'ring',name:'力量戒指',stats:{dmg:.04,crit:.02}},
+  ring2:  {slot:'ring',name:'财富戒指',stats:{gold:.1,pickup:.08}},
+  ring3:  {slot:'ring',name:'疾风戒指',stats:{cd:.03,spd:.03}},
+  charm1: {slot:'charm',name:'幸运徽章',stats:{crit:.03,xp:.04}},
+  charm2: {slot:'charm',name:'能量核心',stats:{dmg:.05,cd:.03}},
+  charm3: {slot:'charm',name:'幸运硬币',stats:{gold:.08,xp:.03}}
+};
+const GEMS={
+  atk: {n:'红宝石',icon:'🔴',stat:'dmg',  label:'伤害',v:[.02,.04,.07]},
+  cd:  {n:'橙宝石',icon:'🟠',stat:'cd',   label:'射击间隔缩短',v:[.02,.04,.06]},
+  crit:{n:'黄宝石',icon:'🟡',stat:'crit', label:'暴击率',v:[.01,.02,.035]},
+  hp:  {n:'绿宝石',icon:'🟢',stat:'hp',   label:'最大生命',v:[4,8,14]},
+  spd: {n:'蓝宝石',icon:'🔵',stat:'spd',  label:'移动速度',v:[.01,.02,.035]},
+  xp:  {n:'紫宝石',icon:'🟣',stat:'xp',   label:'经验获取',v:[.02,.04,.07]}
+};
+const GEM_COST=[100,400,1500];
+const BAG_MAX=60;
+const BOX=[
+  {n:'补给箱',icon:'📦',price:200, w:[60,30,9,1,0],  desc:'普通～史诗，以普通、优秀为主'},
+  {n:'精良箱',icon:'🎁',price:800, w:[0,30,50,17,3], desc:'优秀～传说，精良为主'},
+  {n:'传说箱',icon:'💎',price:3000,w:[0,0,40,45,15], desc:'精良～传说，史诗、传说概率高'}
+];
+const W_DROP=[55,28,12,4,1],W_BOSS=[20,35,28,13,4];
+const itemMult=it=>GR[it.g-1].mult*(1+.08*it.enh);
+const enhCost=it=>Math.round(GR[it.g-1].cost*(1+it.enh*.7)/5)*5;
+const sellVal=it=>Math.round(GR[it.g-1].sell*(1+it.enh*.5));
+function getItem(id){return id==null?null:(SAVE.items.find(i=>i.id===id)||null)}
+function itemName(it){
+  const g=GR[it.g-1];
+  return'<span style="color:'+g.c+'">['+g.n+'] '+TYPES[it.type].name+(it.enh?' +'+it.enh:'')+'</span>';
+}
+function rollGrade(w){
+  let t=0;for(const x of w)t+=x;
+  let r=Math.random()*t;
+  for(let i=0;i<w.length;i++){r-=w[i];if(r<0)return i+1}
+  return 1;
+}
+function rollItem(g){
+  const slot=Math.random()<.22?'weapon':SLOTS[1+((Math.random()*(SLOTS.length-1))|0)];
+  const list=Object.keys(TYPES).filter(k=>TYPES[k].slot===slot);
+  const type=list[(Math.random()*list.length)|0];
+  return{id:SAVE.nextId++,slot,type,g,enh:0,gems:Array(GR[g-1].sock).fill(null)};
+}
+function itemLines(it){
+  const T=TYPES[it.type],M=itemMult(it),L=[];
+  if(it.slot==='weapon'){
+    const w=T.w,cd=w.cd/(1+.04*(it.g-1));
+    L.push('伤害 '+(w.dmg*M).toFixed(1)+'　射速 '+(1/cd).toFixed(1)+' 次/秒');
+    L.push('每次 '+w.count+' 发'+(w.pierce?'　穿透 '+w.pierce:''));
+  }else{
+    for(const k in T.stats)L.push(STAT_N[k]+' '+statText(k,T.stats[k]*M));
+  }
+  for(const gm of it.gems)if(gm){const gd=GEMS[gm.t];L.push(gd.icon+' '+gd.label+' '+statText(gd.stat,gd.v[gm.l-1]))}
+  return L;
+}
+function gearStats(){
+  const A={hp:0,regen:0,spd:0,crit:0,pickup:0,xp:0,dmg:0,cd:0,dr:0,gold:0,critd:0};
+  for(const slot of SLOTS){
+    const it=getItem(SAVE.equip[slot]);
+    if(!it||it.slot!==slot)continue;
+    if(slot!=='weapon'){
+      const T=TYPES[it.type],M=itemMult(it);
+      for(const k in T.stats)A[k]+=T.stats[k]*M;
+    }
+    for(const gm of it.gems)if(gm){const gd=GEMS[gm.t];A[gd.stat]+=gd.v[gm.l-1]}
+  }
+  return A;
+}
+function sanitizeSave(){
+  const ok=[];
+  for(const it of SAVE.items){
+    const T=TYPES[it.type];
+    if(!T||!Number.isFinite(it.id)||!(it.g>=1&&it.g<=5))continue;
+    it.slot=T.slot;it.g=it.g|0;
+    const g=GR[it.g-1];
+    it.enh=clamp(it.enh|0,0,g.enh);
+    const gs=Array.isArray(it.gems)?it.gems:[];
+    it.gems=Array.from({length:g.sock},(_,i)=>{const x=gs[i];return x&&GEMS[x.t]&&x.l>=1&&x.l<=3?{t:x.t,l:x.l|0}:null});
+    ok.push(it);
+    SAVE.nextId=Math.max(SAVE.nextId,it.id+1);
+  }
+  SAVE.items=ok;
+  for(const k of SLOTS){
+    const v=SAVE.equip[k];
+    if(k==='weapon'&&v==='ex')continue;
+    const it=getItem(v);
+    if(!it||it.slot!==k)SAVE.equip[k]=null;
+  }
+}
+sanitizeSave();
+
+const UNLOCK=[0,250,400];
+const GOLD={grunt:.6,runner:.6,brute:4,boss:80};
+const META=[
+  {id:'atk',  name:'淬火弹头',icon:'🔥',max:20,base:60, desc:'子弹伤害 +5% / 级',eff:l=>'+'+(l*5)+'%'},
+  {id:'hp',   name:'强化体质',icon:'❤️',max:20,base:60, desc:'最大生命 +10 / 级',eff:l=>'+'+(l*10)},
+  {id:'speed',name:'轻量战靴',icon:'👟',max:12,base:50, desc:'移动速度 +3% / 级',eff:l=>'+'+(l*3)+'%'},
+  {id:'magnet',name:'扩容磁铁',icon:'🧲',max:12,base:40, desc:'拾取范围 +10% / 级',eff:l=>'+'+(l*10)+'%'},
+  {id:'crit', name:'精准校准',icon:'🎯',max:12,base:70, desc:'暴击率 +2% / 级',eff:l=>'+'+(l*2)+'%'},
+  {id:'regen',name:'战地医疗',icon:'💊',max:10,base:80, desc:'每秒回血 +0.15 / 级',eff:l=>'+'+(l*.15).toFixed(2)+'/秒'},
+  {id:'xp',   name:'战术学习',icon:'📘',max:15,base:60, desc:'经验获取 +6% / 级',eff:l=>'+'+(l*6)+'%'},
+  {id:'gold', name:'拾荒者',  icon:'🪙',max:15,base:50, desc:'金币获取 +8% / 级',eff:l=>'+'+(l*8)+'%'},
+  {id:'start',name:'先发制人',icon:'🚀',max:3, base:300,desc:'开局直接升 1 级 / 级',eff:l=>'开局 +'+l+' 级'},
+  {id:'revive',name:'紧急复活',icon:'✨',max:3, base:500,desc:'每局可复活 1 次 / 级，复活时清场',eff:l=>'每局 '+l+' 次'}
+];
+const metaCost=(m,l)=>Math.round(m.base*(1+l*.6)*Math.pow(1.08,l)/5)*5;
+const xpFor=l=>Math.floor(4+(l-1)*3.5+Math.pow(l,1.5));
+
+/* ---------- state ---------- */
+let S=null,mode='menu',selChar=0,ENID=0,idleT=0,choices=[],lvOpenAt=0;
+const grid=new Map();
+const CELL=96;
+const gk=(x,y)=>Math.imul(x,73856093)^Math.imul(y,19349663);
+const keys={};
+const joy={on:false,id:null,ox:0,oy:0,x:0,y:0,kx:0,ky:0};
+
+function newRun(ci){
+  const c=CHARS[ci],lv=charInfo(ci).lv;
+  // 武器：默认 / 专属 / 通用装备
+  let wb={dmg:c.dmg,cd:c.cd,count:c.count,spread:c.spread,bspeed:c.bspeed,life:c.life,pierce:c.pierce,gl:c.gl,gw:c.gw,splash:0,splashPct:0,homing:0};
+  const eqW=SAVE.equip.weapon;
+  if(eqW==='ex'&&lv>=EX_W_LV){
+    wb=Object.assign(wb,c.ex.w);wb.dmg*=1+.04*(lv-EX_W_LV);
+  }else{
+    const wi=getItem(eqW);
+    if(wi&&wi.slot==='weapon'){
+      wb=Object.assign(wb,TYPES[wi.type].w);wb.dmg*=itemMult(wi);wb.cd/=1+.04*(wi.g-1);
+    }
+  }
+  const A=gearStats();
+  S={t:0,kills:0,lvl:1,xp:0,xpNeed:xpFor(1),pending:0,
+    p:{x:0,y:0,r:13,hp:c.hp,maxHp:c.hp,speed:c.speed,dmg:wb.dmg,cd:wb.cd,count:wb.count,spread:wb.spread,
+       bspeed:wb.bspeed,life:wb.life,pierce:wb.pierce,splash:wb.splash,splashPct:wb.splashPct,homing:wb.homing,
+       pickup:72,crit:.05,critMul:2,regen:0,orbit:0,gren:0,
+       iframe:0,hurt:0,aim:0,fireT:0,orbA:0,grenT:2.5,flash:0,walk:0,color:c.color,gl:wb.gl,gw:wb.gw,ci,buffT:0,rageT:0},
+    up:{},en:[],bu:[],gem:[],part:[],cas:[],txt:[],gr:[],fx:[],
+    spawnT:.4,nextBoss:95,nextWave:40,cam:{x:-VW/2,y:-VH/2},shake:0,banner:'',bannerT:0,gold:0,revive:0,settled:false,
+    skill:lv>=EX_S_LV?c.skill:null,skillT:2,bossKills:0,res:null};
+  const U=SAVE.up,P=S.p;
+  P.dmg*=(1+.05*(U.atk||0))*(1+.02*(lv-1))*(1+A.dmg);
+  P.maxHp=Math.round(c.hp+10*(U.hp||0)+3*(lv-1)+A.hp);P.hp=P.maxHp;
+  P.speed*=1+.03*(U.speed||0)+A.spd;
+  P.pickup*=1+.1*(U.magnet||0)+A.pickup;
+  P.crit+=.02*(U.crit||0)+A.crit;
+  P.regen+=.15*(U.regen||0)+A.regen;
+  P.xpMul=1+.06*(U.xp||0)+A.xp;
+  P.cd*=1-Math.min(.5,A.cd);
+  P.critMul+=A.critd;P.dr=Math.min(.5,A.dr);S.goldBonus=A.gold;
+  S.revive=U.revive||0;
+  const n=U.start||0;
+  if(n){S.lvl=1+n;S.xpNeed=xpFor(S.lvl);S.pending=n}
+}
+
+/* ---------- helpers ---------- */
+function hash(x,y){
+  let h=(Math.imul(x,374761393)+Math.imul(y,668265263))|0;
+  h=Math.imul(h^(h>>>13),1274126177);
+  return((h^(h>>>16))>>>0)/4294967296;
+}
+function buildGrid(){
+  grid.clear();
+  for(const e of S.en){
+    if(e.dead)continue;
+    const k=gk(Math.floor(e.x/CELL),Math.floor(e.y/CELL));
+    let a=grid.get(k);if(!a){a=[];grid.set(k,a)}a.push(e);
+  }
+}
+function forNear(x,y,rad,fn){
+  const x0=Math.floor((x-rad)/CELL),x1=Math.floor((x+rad)/CELL),y0=Math.floor((y-rad)/CELL),y1=Math.floor((y+rad)/CELL);
+  for(let cx=x0;cx<=x1;cx++)for(let cy=y0;cy<=y1;cy++){
+    const a=grid.get(gk(cx,cy));
+    if(a)for(let i=0;i<a.length;i++)fn(a[i]);
+  }
+}
+function burst(x,y,n,color,sp){
+  for(let i=0;i<n&&S.part.length<320;i++){
+    const a=rnd(0,TAU),s=rnd(40,(sp||160));
+    S.part.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,t:rnd(.25,.5),max:.5,c:color,s:rnd(2,4)});
+  }
+}
+function banner(t){S.banner=t;S.bannerT=2.4}
+
+/* ---------- spawning ---------- */
+function spawnEnemy(type,ang,dist){
+  const p=S.p,T=ET[type];
+  ang=ang===undefined?rnd(0,TAU):ang;
+  dist=dist===undefined?Math.hypot(VW,VH)/2+50:dist;
+  const hm=1+S.t/60*.38;
+  const hp=T.hp*hm;
+  S.en.push({id:++ENID,type,x:p.x+Math.cos(ang)*dist,y:p.y+Math.sin(ang)*dist,r:T.r,hp,maxHp:hp,
+    speed:T.speed*(1+Math.min(.35,S.t/600))*rnd(.92,1.08),dmg:T.dmg*(1+S.t/700),xp:T.xp,
+    kx:0,ky:0,flash:0,orbCd:0,wob:rnd(0,TAU),boss:type==='boss',dead:false});
+}
+function pickType(){
+  const t=S.t,r=Math.random();
+  const bp=t>75?Math.min(.2,.05+(t-75)/700):0;
+  if(r<bp)return'brute';
+  if(t>25&&r<bp+.3)return'runner';
+  return'grunt';
+}
+
+/* ---------- combat ---------- */
+function dmgEnemy(e,d,nx,ny,crit){
+  if(e.dead)return;
+  e.hp-=d;e.flash=.08;
+  const kb=150*13/e.r*(e.boss?.25:1);
+  e.kx+=nx*kb;e.ky+=ny*kb;
+  if(S.txt.length<50)S.txt.push({x:e.x+rnd(-6,6),y:e.y-e.r,t:.55,s:Math.round(d),c:crit});
+  if(S.part.length<320)S.part.push({x:e.x,y:e.y,vx:rnd(-80,80),vy:rnd(-80,80),t:.25,max:.25,c:ET[e.type].color,s:3});
+  if(e.hp<=0)killEnemy(e);
+}
+function killEnemy(e){
+  e.dead=true;S.kills++;S.gold+=GOLD[e.type]||0;
+  burst(e.x,e.y,e.boss?34:6,ET[e.type].color,e.boss?280:170);
+  if(e.boss){
+    for(let i=0;i<10;i++)dropGem(e.x+rnd(-46,46),e.y+rnd(-46,46),6);
+    S.gem.push({x:e.x,y:e.y,v:0,heart:true});
+    S.shake=14;S.bossKills++;sfx(120,.5,'sawtooth',.06,-80);banner('首领已击破！');
+  }else{
+    dropGem(e.x,e.y,e.xp);
+    if(Math.random()<.012)S.gem.push({x:e.x,y:e.y,v:0,heart:true});
+  }
+  const now=performance.now();
+  if(now-lastKill>60){lastKill=now;sfx(rnd(180,240),.06,'triangle',.025,-60)}
+}
+function dropGem(x,y,v){
+  if(S.gem.length>420){addXp(v);return}
+  S.gem.push({x,y,v,heart:false});
+}
+function addXp(v){
+  S.xp+=v*(S.p.xpMul||1);
+  const before=S.lvl;
+  while(S.xp>=S.xpNeed){S.xp-=S.xpNeed;S.lvl++;S.xpNeed=xpFor(S.lvl);S.pending++}
+  if(S.lvl>before)sfx(520,.12,'square',.03,300);
+}
+
+function fire(){
+  const p=S.p,n=p.count;
+  for(let i=0;i<n&&S.bu.length<420;i++){
+    const off=n>1?(i-(n-1)/2)*p.spread:0;
+    const a=p.aim+off+rnd(-1,1)*p.spread*(n>1?.3:.5);
+    const sp=p.bspeed*rnd(.95,1.05);
+    S.bu.push({x:p.x+Math.cos(p.aim)*(p.gl-2),y:p.y+Math.sin(p.aim)*(p.gl-2),
+      vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:p.life,dmg:p.dmg*(p.buffT>0?1.4:1),r:4,pierce:p.pierce,hit:[],dead:false,
+      splash:p.splash,splashPct:p.splashPct,homing:p.homing});
+  }
+  const ea=p.aim+Math.PI/2+rnd(-.4,.4),es=rnd(70,140);
+  if(S.cas.length<40)S.cas.push({x:p.x+Math.cos(p.aim)*8,y:p.y+Math.sin(p.aim)*8,vx:Math.cos(ea)*es,vy:Math.sin(ea)*es,rot:rnd(0,TAU),vr:rnd(-16,16),t:.7});
+  p.flash=.05;
+  const now=performance.now();
+  if(now-lastShot>70){lastShot=now;sfx(rnd(300,380),.05,'square',.018,-140)}
+}
+function throwGrenade(){
+  const p=S.p,cand=[];
+  for(const e of S.en){
+    if(e.dead)continue;
+    const d=Math.hypot(e.x-p.x,e.y-p.y);
+    if(d<340)cand.push(e);
+  }
+  if(!cand.length)return false;
+  const t=cand[(Math.random()*cand.length)|0];
+  S.gr.push({sx:p.x,sy:p.y,tx:t.x,ty:t.y,t:0,dur:.65});
+  return true;
+}
+function explode(g){
+  const p=S.p,R=72+9*p.gren,D=32+15*p.gren+p.dmg*.6;
+  S.fx.push({x:g.tx,y:g.ty,r:R,t:.3,max:.3});
+  burst(g.tx,g.ty,16,'#ffb347',260);
+  S.shake=Math.max(S.shake,5);sfx(110,.25,'sawtooth',.05,-60);
+  forNear(g.tx,g.ty,R+50,e=>{
+    if(e.dead)return;
+    const dx=e.x-g.tx,dy=e.y-g.ty,d=Math.hypot(dx,dy)||1;
+    if(d<R+e.r)dmgEnemy(e,D*rnd(.9,1.1),dx/d,dy/d,false);
+  });
+}
+
+function settleGold(){
+  if(!S||S.settled)return 0;
+  S.settled=true;
+  const g=Math.floor(S.gold*(1+.08*(SAVE.up.gold||0)+(S.goldBonus||0)))+Math.floor(S.t/10)*2+S.lvl*3;
+  SAVE.gold+=g;SAVE.runs++;
+  if(S.t>SAVE.best)SAVE.best=S.t;
+  // 角色经验
+  const ci=S.p.ci,before=charInfo(ci).lv;
+  const cx=Math.floor(S.t/4)+Math.floor(S.kills/4)+S.lvl*3+S.bossKills*30;
+  SAVE.chars[ci].xp+=cx;
+  const after=charInfo(ci).lv;
+  // 战利品
+  const drops=[];
+  if(S.t>=45)drops.push(rollItem(rollGrade(W_DROP)));
+  for(let i=0;i<S.bossKills;i++)drops.push(rollItem(rollGrade(W_BOSS)));
+  for(const it of drops){
+    if(SAVE.items.length<BAG_MAX)SAVE.items.push(it);
+    else{it.sold=true;SAVE.gold+=sellVal(it)}
+  }
+  S.res={g,cx,before,after,drops};
+  persist();
+  return g;
+}
+function castSkill(){
+  if(mode!=='play'||!S||!S.skill||S.skillT>0)return;
+  const p=S.p,sk=S.skill;
+  S.skillT=sk.cd;
+  banner(sk.icon+' '+sk.name);
+  if(sk.id==='nova'){
+    const R=240,D=50+p.dmg*6;
+    S.fx.push({x:p.x,y:p.y,r:R,t:.45,max:.45});
+    forNear(p.x,p.y,R+50,e=>{
+      if(e.dead)return;
+      const dx=e.x-p.x,dy=e.y-p.y,d=Math.hypot(dx,dy)||1;
+      if(d<R+e.r)dmgEnemy(e,D,dx/d*2.5,dy/d*2.5,false);
+    });
+    S.shake=10;sfx(160,.3,'sawtooth',.06,-100);
+  }else if(sk.id==='iron'){
+    p.buffT=4.5;p.iframe=Math.max(p.iframe,4.5);
+    p.hp=Math.min(p.maxHp,p.hp+p.maxHp*.2);
+    sfx(300,.4,'triangle',.06,300);
+  }else if(sk.id==='rage'){
+    p.rageT=6;
+    sfx(500,.4,'sawtooth',.05,600);
+  }
+}
+function gameOver(){
+  mode='over';
+  const prev=SAVE.best;
+  const g=settleGold();
+  const nb=S.t>prev;
+  $('sTime').textContent=fmt(S.t);$('sKills').textContent=S.kills;$('sLvl').textContent=S.lvl;
+  $('overNote').textContent=nb?'新纪录！':'最佳存活 '+fmt(SAVE.best);
+  $('overGold').textContent='+'+g+' 🪙　（共 '+SAVE.gold+'）';
+  const R=S.res;
+  if(R){
+    const c=CHARS[S.p.ci];
+    let h='<div>'+c.name+' 经验 +'+R.cx+'　Lv.'+R.before+(R.after>R.before?' → <b style="color:var(--brass)">Lv.'+R.after+'</b>':'')+'</div>';
+    if(R.before<EX_W_LV&&R.after>=EX_W_LV)h+='<div>🔓 解锁专属武器：'+c.ex.name+'</div>';
+    if(R.before<EX_S_LV&&R.after>=EX_S_LV)h+='<div>🔓 解锁专属技能：'+c.skill.name+'</div>';
+    for(const it of R.drops)h+='<div>🎁 获得 '+itemName(it)+(it.sold?'（背包已满，已自动出售）':'')+'</div>';
+    $('overExtra').innerHTML=h;
+  }
+  $('tools').classList.remove('show');
+  $('over').classList.add('show');
+  sfx(200,.6,'sawtooth',.06,-150);
+}
+
+/* ---------- update ---------- */
+function update(dt){
+  const p=S.p;
+  S.t+=dt;
+
+  // input
+  let ix=0,iy=0;
+  if(keys.KeyA||keys.ArrowLeft)ix-=1;
+  if(keys.KeyD||keys.ArrowRight)ix+=1;
+  if(keys.KeyW||keys.ArrowUp)iy-=1;
+  if(keys.KeyS||keys.ArrowDown)iy+=1;
+  if(joy.on){ix+=joy.x;iy+=joy.y}
+  const m=Math.hypot(ix,iy);
+  if(m>1){ix/=m;iy/=m}
+  const spd=p.speed*(p.rageT>0?1.3:1);
+  p.x+=ix*spd*dt;p.y+=iy*spd*dt;
+  p.walk+=Math.min(1,m)*dt*12;
+  if(p.iframe>0)p.iframe-=dt;
+  if(p.buffT>0)p.buffT-=dt;
+  if(p.rageT>0)p.rageT-=dt;
+  if(S.skillT>0)S.skillT-=dt;
+  if(p.hurt>0)p.hurt-=dt;
+  if(p.flash>0)p.flash-=dt;
+  if(p.regen>0)p.hp=Math.min(p.maxHp,p.hp+p.regen*dt);
+
+  // spawns
+  S.spawnT-=dt;
+  if(S.spawnT<=0){
+    S.spawnT=Math.max(.2,1-S.t/170);
+    const n=1+Math.floor(S.t/40);
+    for(let i=0;i<n&&S.en.length<330;i++)spawnEnemy(pickType());
+  }
+  if(S.t>=S.nextWave){
+    S.nextWave+=50;
+    banner('⚠ 尸潮来袭');sfx(90,.5,'sawtooth',.05,40);
+    const n=24,t=S.t>60?'runner':'grunt';
+    for(let i=0;i<n&&S.en.length<360;i++)spawnEnemy(t,i/n*TAU+rnd(-.05,.05),Math.hypot(VW,VH)/2+70);
+  }
+  if(S.t>=S.nextBoss){
+    S.nextBoss+=100;
+    banner('☠ 首领出现');sfx(70,.8,'sawtooth',.06,30);
+    spawnEnemy('boss');
+  }
+
+  // enemies
+  const vd=Math.hypot(VW,VH)/2+60;
+  for(const e of S.en){
+    if(e.dead)continue;
+    const dx=p.x-e.x,dy=p.y-e.y,d=Math.hypot(dx,dy)||1;
+    if(d>vd*1.3&&!e.boss){
+      const a=rnd(0,TAU);e.x=p.x+Math.cos(a)*vd;e.y=p.y+Math.sin(a)*vd;continue;
+    }
+    e.x+=(dx/d*e.speed+e.kx)*dt;e.y+=(dy/d*e.speed+e.ky)*dt;
+    const k=Math.exp(-9*dt);e.kx*=k;e.ky*=k;
+    e.wob+=dt*(e.speed/14);
+    if(e.flash>0)e.flash-=dt;
+    if(e.orbCd>0)e.orbCd-=dt;
+  }
+  buildGrid();
+  // soft separation
+  for(const e of S.en){
+    if(e.dead)continue;
+    const cx=Math.floor(e.x/CELL),cy=Math.floor(e.y/CELL);
+    for(let ox=-1;ox<=1;ox++)for(let oy=-1;oy<=1;oy++){
+      const a=grid.get(gk(cx+ox,cy+oy));
+      if(!a)continue;
+      for(let i=0;i<a.length;i++){
+        const o=a[i];
+        if(o.id<=e.id)continue;
+        const dx=o.x-e.x,dy=o.y-e.y,md=(e.r+o.r)*.85,d2=dx*dx+dy*dy;
+        if(d2<md*md&&d2>.01){
+          const d=Math.sqrt(d2),push=(md-d)*.5,nx=dx/d,ny=dy/d;
+          const wE=o.r/(e.r+o.r),wO=e.r/(e.r+o.r);
+          e.x-=nx*push*wE;e.y-=ny*push*wE;o.x+=nx*push*wO;o.y+=ny*push*wO;
+        }
+      }
+    }
+  }
+
+  // auto aim + fire
+  p.fireT-=dt*(p.rageT>0?2:1);
+  const range=Math.min(560,p.life*p.bspeed*.95);
+  let tgt=null,bd=range*range;
+  for(const e of S.en){
+    if(e.dead)continue;
+    const dx=e.x-p.x,dy=e.y-p.y,d2=dx*dx+dy*dy;
+    if(d2<bd){bd=d2;tgt=e}
+  }
+  if(tgt){
+    p.aim=Math.atan2(tgt.y-p.y,tgt.x-p.x);
+    if(p.fireT<=0){fire();p.fireT=p.cd}
+  }else if(m>.1){
+    p.aim=Math.atan2(iy,ix);
+  }
+
+  // bullets
+  for(const b of S.bu){
+    b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
+    if(b.life<=0){b.dead=true;continue}
+    if(b.homing){
+      let best=null,bd2=240*240;
+      forNear(b.x,b.y,240,o=>{
+        if(o.dead||b.hit.includes(o.id))return;
+        const ox=o.x-b.x,oy=o.y-b.y,d2=ox*ox+oy*oy;
+        if(d2<bd2){bd2=d2;best=o}
+      });
+      if(best){
+        const spd=Math.hypot(b.vx,b.vy),cur=Math.atan2(b.vy,b.vx);
+        let df=Math.atan2(best.y-b.y,best.x-b.x)-cur;
+        while(df>Math.PI)df-=TAU;
+        while(df<-Math.PI)df+=TAU;
+        const na=cur+clamp(df,-b.homing*dt,b.homing*dt);
+        b.vx=Math.cos(na)*spd;b.vy=Math.sin(na)*spd;
+      }
+    }
+    forNear(b.x,b.y,52,e=>{
+      if(b.dead||e.dead||b.hit.includes(e.id))return;
+      const dx=e.x-b.x,dy=e.y-b.y,rr=e.r+b.r;
+      if(dx*dx+dy*dy<rr*rr){
+        const crit=Math.random()<p.crit;
+        const d=b.dmg*(crit?p.critMul:1)*rnd(.9,1.1);
+        const sp=Math.hypot(b.vx,b.vy)||1;
+        dmgEnemy(e,d,b.vx/sp,b.vy/sp,crit);
+        if(b.splash){
+          S.fx.push({x:b.x,y:b.y,r:b.splash,t:.18,max:.18});
+          const sd=d*b.splashPct;
+          forNear(b.x,b.y,b.splash+50,o=>{
+            if(o===e||o.dead)return;
+            const ox=o.x-b.x,oy=o.y-b.y,od=Math.hypot(ox,oy)||1;
+            if(od<b.splash+o.r)dmgEnemy(o,sd,ox/od,oy/od,false);
+          });
+        }
+        b.hit.push(e.id);
+        if(b.pierce--<=0)b.dead=true;
+      }
+    });
+  }
+  S.bu=S.bu.filter(b=>!b.dead);
+
+  // orbiting shells
+  if(p.orbit>0){
+    p.orbA+=dt*3.4;
+    const od=8+p.dmg*.5;
+    for(let i=0;i<p.orbit;i++){
+      const a=p.orbA+i*TAU/p.orbit,ox=p.x+Math.cos(a)*66,oy=p.y+Math.sin(a)*66;
+      forNear(ox,oy,50,e=>{
+        if(e.dead||e.orbCd>0)return;
+        const dx=e.x-ox,dy=e.y-oy,rr=e.r+10;
+        if(dx*dx+dy*dy<rr*rr){
+          const nx=e.x-p.x,ny=e.y-p.y,d=Math.hypot(nx,ny)||1;
+          dmgEnemy(e,od,nx/d,ny/d,false);e.orbCd=.35;
+        }
+      });
+    }
+  }
+
+  // grenades
+  if(p.gren>0){
+    p.grenT-=dt;
+    if(p.grenT<=0){p.grenT=throwGrenade()?Math.max(1.1,3.4-.35*p.gren):.4}
+  }
+  for(const g of S.gr){g.t+=dt;if(g.t>=g.dur){g.done=true;explode(g)}}
+  S.gr=S.gr.filter(g=>!g.done);
+
+  // contact damage
+  if(p.iframe<=0){
+    for(const e of S.en){
+      if(e.dead)continue;
+      const dx=e.x-p.x,dy=e.y-p.y,rr=e.r+p.r-3;
+      if(dx*dx+dy*dy<rr*rr){
+        p.hp-=e.dmg*(1-(p.dr||0));p.iframe=.5;p.hurt=.3;S.shake=Math.max(S.shake,7);
+        sfx(140,.15,'sawtooth',.05,-60);
+        if(p.hp<=0){
+          if(S.revive>0){
+            S.revive--;p.hp=p.maxHp*.5;p.iframe=2.5;p.hurt=0;
+            for(const x of S.en){
+              if(x.dead)continue;
+              const dx=x.x-p.x,dy=x.y-p.y,d=Math.hypot(dx,dy)||1;
+              if(d<320){if(x.boss){x.kx+=dx/d*700;x.ky+=dy/d*700}else dmgEnemy(x,1e9,dx/d,dy/d,false)}
+            }
+            S.fx.push({x:p.x,y:p.y,r:320,t:.4,max:.4});S.shake=12;
+            banner('✨ 复活');sfx(400,.5,'sine',.06,500);
+          }else{p.hp=0;S.en=S.en.filter(x=>!x.dead);gameOver();return}
+        }
+        break;
+      }
+    }
+  }
+  S.en=S.en.filter(e=>!e.dead);
+
+  // gems
+  for(const g of S.gem){
+    const dx=p.x-g.x,dy=p.y-g.y,d=Math.hypot(dx,dy)||1;
+    if(d<p.pickup||g.mag){
+      g.mag=true;
+      const sp=300+Math.max(0,300-d)*1.2;
+      g.x+=dx/d*sp*dt;g.y+=dy/d*sp*dt;
+    }
+    if(d<p.r+8){
+      g.got=true;
+      if(g.heart){p.hp=Math.min(p.maxHp,p.hp+p.maxHp*.25);sfx(520,.15,'sine',.04,200)}
+      else{addXp(g.v);const now=performance.now();if(now-lastKill>40){lastKill=now;sfx(700+Math.min(500,S.xp*8),.05,'sine',.02)}}
+    }
+  }
+  S.gem=S.gem.filter(g=>!g.got);
+
+  // fx
+  for(const c of S.cas){c.x+=c.vx*dt;c.y+=c.vy*dt;c.rot+=c.vr*dt;const k=Math.exp(-4*dt);c.vx*=k;c.vy*=k;c.t-=dt}
+  S.cas=S.cas.filter(c=>c.t>0);
+  for(const q of S.part){q.x+=q.vx*dt;q.y+=q.vy*dt;const k=Math.exp(-5*dt);q.vx*=k;q.vy*=k;q.t-=dt}
+  S.part=S.part.filter(q=>q.t>0);
+  for(const t of S.txt){t.y-=34*dt;t.t-=dt}
+  S.txt=S.txt.filter(t=>t.t>0);
+  for(const f of S.fx)f.t-=dt;
+  S.fx=S.fx.filter(f=>f.t>0);
+  if(S.bannerT>0)S.bannerT-=dt;
+  S.shake*=Math.exp(-10*dt);
+
+  // camera
+  const k=1-Math.exp(-12*dt);
+  S.cam.x+=(p.x-VW/2-S.cam.x)*k;S.cam.y+=(p.y-VH/2-S.cam.y)*k;
+
+}
+
+/* ---------- render ---------- */
+function drawGround(cx,cy){
+  const T=88;
+  ctx.fillStyle='#232b2f';ctx.fillRect(cx-4,cy-4,VW+8,VH+8);
+  const x0=Math.floor(cx/T)-1,x1=Math.floor((cx+VW)/T)+1,y0=Math.floor(cy/T)-1,y1=Math.floor((cy+VH)/T)+1;
+  for(let ty=y0;ty<=y1;ty++)for(let tx=x0;tx<=x1;tx++){
+    const h=hash(tx,ty),px=tx*T,py=ty*T;
+    if(((tx+ty)&1)===0){ctx.fillStyle='rgba(255,255,255,.02)';ctx.fillRect(px,py,T,T)}
+    if(h<.12){
+      ctx.fillStyle='rgba(0,0,0,.16)';ctx.beginPath();
+      ctx.ellipse(px+T*hash(tx+7,ty),py+T*hash(tx,ty+9),24,13,0,0,TAU);ctx.fill();
+    }else if(h>.9){
+      const rx=px+T*hash(tx+3,ty+5),ry=py+T*hash(tx+11,ty);
+      ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(rx+3,ry+5,13,6,0,0,TAU);ctx.fill();
+      ctx.fillStyle='#3d484d';ctx.beginPath();ctx.ellipse(rx,ry,12,8,0,0,TAU);ctx.fill();
+      ctx.fillStyle='#4b585e';ctx.beginPath();ctx.ellipse(rx-3,ry-2,6,3.5,0,0,TAU);ctx.fill();
+    }else if(h>.55&&h<.64){
+      const gx=px+T*hash(tx+1,ty+2),gy=py+T*hash(tx+5,ty+8);
+      ctx.strokeStyle='#3a5338';ctx.lineWidth=2;ctx.beginPath();
+      ctx.moveTo(gx,gy);ctx.lineTo(gx-4,gy-9);ctx.moveTo(gx,gy);ctx.lineTo(gx+1,gy-11);ctx.moveTo(gx,gy);ctx.lineTo(gx+5,gy-8);ctx.stroke();
+    }
+  }
+}
+function drawEnemy(e){
+  const T=ET[e.type],bob=Math.sin(e.wob)*1.6;
+  ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.ellipse(e.x,e.y+e.r*.8,e.r*.9,e.r*.36,0,0,TAU);ctx.fill();
+  const fl=e.flash>0;
+  const a=Math.atan2(S.p.y-e.y,S.p.x-e.x),ca=Math.cos(a),sa=Math.sin(a);
+  if(e.type==='brute'||e.boss){
+    ctx.fillStyle=fl?'#fff':T.dark;
+    const hr=e.r*.45;
+    for(const s of[-1,1]){
+      ctx.beginPath();
+      ctx.moveTo(e.x+s*e.r*.55,e.y+bob-e.r*.6);
+      ctx.lineTo(e.x+s*e.r*.95,e.y+bob-e.r*1.15);
+      ctx.lineTo(e.x+s*(e.r*.55-hr*.1+hr*.7),e.y+bob-e.r*.3);
+      ctx.fill();
+    }
+  }
+  ctx.fillStyle=fl?'#fff':T.color;
+  ctx.beginPath();ctx.arc(e.x,e.y+bob,e.r,0,TAU);ctx.fill();
+  ctx.lineWidth=e.boss?4:2.5;ctx.strokeStyle=fl?'#fff':T.dark;ctx.stroke();
+  if(!fl){
+    ctx.fillStyle='rgba(255,255,255,.14)';ctx.beginPath();ctx.arc(e.x-e.r*.3,e.y+bob-e.r*.35,e.r*.35,0,TAU);ctx.fill();
+    const ex=e.x+ca*e.r*.28,ey=e.y+bob+sa*e.r*.28,px=-sa*e.r*.36,py=ca*e.r*.36,er=e.r*.24;
+    for(const s of[-1,1]){
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(ex+px*s,ey+py*s,er,0,TAU);ctx.fill();
+      ctx.fillStyle='#14181b';ctx.beginPath();ctx.arc(ex+px*s+ca*er*.45,ey+py*s+sa*er*.45,er*.5,0,TAU);ctx.fill();
+    }
+  }
+  if(e.boss){
+    ctx.fillStyle='#ffd24d';ctx.strokeStyle='#8a620a';ctx.lineWidth=2.5;
+    const cx=e.x,cy=e.y+bob-e.r-2,w=e.r*.9;
+    ctx.beginPath();ctx.moveTo(cx-w,cy+6);ctx.lineTo(cx-w,cy-14);ctx.lineTo(cx-w*.5,cy-3);ctx.lineTo(cx,cy-18);
+    ctx.lineTo(cx+w*.5,cy-3);ctx.lineTo(cx+w,cy-14);ctx.lineTo(cx+w,cy+6);ctx.closePath();ctx.fill();ctx.stroke();
+  }else if(e.hp<e.maxHp&&e.type==='brute'){
+    const w=e.r*1.6;
+    ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(e.x-w/2,e.y-e.r-10,w,4);
+    ctx.fillStyle='#e5533d';ctx.fillRect(e.x-w/2,e.y-e.r-10,w*Math.max(0,e.hp/e.maxHp),4);
+  }
+}
+function drawPlayer(){
+  const p=S.p;
+  ctx.save();ctx.translate(p.x,p.y);
+  ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.ellipse(0,11,13,5,0,0,TAU);ctx.fill();
+  if(p.buffT>0){
+    ctx.strokeStyle='rgba(255,210,77,.9)';ctx.fillStyle='rgba(255,210,77,.16)';ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(0,0,27+Math.sin(S.t*10)*2,0,TAU);ctx.fill();ctx.stroke();
+  }
+  if(p.rageT>0){
+    ctx.strokeStyle='rgba(247,37,133,.75)';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.arc(0,0,22+((S.t*30)%8),0,TAU);ctx.stroke();
+  }
+  if(p.iframe>0&&p.buffT<=0&&Math.floor(p.iframe*20)%2===0)ctx.globalAlpha=.45;
+  const sw=Math.sin(p.walk)*3;
+  ctx.fillStyle='#262c31';
+  ctx.beginPath();ctx.ellipse(-5,10+sw*.5,4.5,3.2,0,0,TAU);ctx.fill();
+  ctx.beginPath();ctx.ellipse(5,10-sw*.5,4.5,3.2,0,0,TAU);ctx.fill();
+  ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(0,0,p.r,0,TAU);ctx.fill();
+  ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.4)';ctx.stroke();
+  ctx.save();ctx.rotate(p.aim);
+  ctx.fillStyle='#2a3036';ctx.fillRect(5,-p.gw/2,p.gl-5,p.gw);
+  ctx.fillStyle='#4a545c';ctx.fillRect(5,-p.gw/2,p.gl-5,2);
+  ctx.fillStyle='#14181b';ctx.fillRect(p.gl-4,-p.gw/2-1,4,p.gw+2);
+  if(p.flash>0){ctx.fillStyle='#fff3b0';ctx.beginPath();ctx.arc(p.gl+5,0,8,0,TAU);ctx.fill();ctx.fillStyle='#ffb347';ctx.beginPath();ctx.arc(p.gl+4,0,4.5,0,TAU);ctx.fill()}
+  ctx.fillStyle='rgba(20,24,27,.85)';
+  ctx.beginPath();ctx.ellipse(5,0,5,8,0,0,TAU);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.35)';ctx.fillRect(4,-5,2,4);
+  ctx.restore();
+  ctx.restore();
+}
+function drawHeart(x,y){
+  ctx.fillStyle='#ff4d6d';ctx.strokeStyle='#8c1630';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(x,y+8);
+  ctx.bezierCurveTo(x-14,y-2,x-8,y-13,x,y-5);
+  ctx.bezierCurveTo(x+8,y-13,x+14,y-2,x,y+8);ctx.fill();ctx.stroke();
+}
+function drawWorld(cx,cy){
+  drawGround(cx,cy);
+  if(!S)return;
+  const p=S.p,x0=cx-60,x1=cx+VW+60,y0=cy-60,y1=cy+VH+60;
+  const vis=o=>o.x>x0&&o.x<x1&&o.y>y0&&o.y<y1;
+
+  // casings
+  for(const c of S.cas){
+    ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.rot);ctx.globalAlpha=clamp(c.t*3,0,1);
+    ctx.fillStyle='#e8b330';ctx.fillRect(-3.5,-1.8,7,3.6);ctx.fillStyle='#fff0a6';ctx.fillRect(-3.5,-1.8,7,1.2);
+    ctx.restore();
+  }
+  // gems
+  for(const g of S.gem){
+    if(!vis(g))continue;
+    if(g.heart){drawHeart(g.x,g.y);continue}
+    const col=g.v>=6?'#ffd24d':g.v>=3?'#6bdc7c':'#5cc8ff';
+    ctx.fillStyle=col;ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=1.5;
+    const s=g.v>=6?8:g.v>=3?7:5.5;
+    ctx.beginPath();ctx.moveTo(g.x,g.y-s);ctx.lineTo(g.x+s*.75,g.y);ctx.lineTo(g.x,g.y+s);ctx.lineTo(g.x-s*.75,g.y);ctx.closePath();ctx.fill();ctx.stroke();
+  }
+  // grenade targets
+  for(const g of S.gr){
+    const k=g.t/g.dur;
+    ctx.strokeStyle='rgba(255,90,60,.7)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(g.tx,g.ty,72+9*p.gren,0,TAU);ctx.stroke();
+  }
+  // enemies
+  for(const e of S.en)if(vis(e))drawEnemy(e);
+  // bullets
+  ctx.lineCap='round';
+  for(const b of S.bu){
+    if(!vis(b))continue;
+    const sp=Math.hypot(b.vx,b.vy)||1,tx=b.x-b.vx/sp*14,ty=b.y-b.vy/sp*14;
+    ctx.strokeStyle='rgba(255,200,70,.55)';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(b.x,b.y);ctx.stroke();
+    ctx.strokeStyle='#fff6c8';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(tx+(b.x-tx)*.4,ty+(b.y-ty)*.4);ctx.lineTo(b.x,b.y);ctx.stroke();
+  }
+  drawPlayer();
+  // orbit shells
+  for(let i=0;i<p.orbit;i++){
+    const a=p.orbA+i*TAU/p.orbit,ox=p.x+Math.cos(a)*66,oy=p.y+Math.sin(a)*66;
+    ctx.save();ctx.translate(ox,oy);ctx.rotate(a+Math.PI/2);
+    ctx.fillStyle='rgba(255,200,70,.25)';ctx.beginPath();ctx.arc(0,0,14,0,TAU);ctx.fill();
+    ctx.fillStyle='#e8b330';ctx.strokeStyle='#8a620a';ctx.lineWidth=2;
+    ctx.beginPath();ctx.roundRect(-5,-10,10,20,3);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#fff0a6';ctx.fillRect(-3,-8,2.5,14);
+    ctx.fillStyle='#a87b12';ctx.beginPath();ctx.arc(0,-10,5,Math.PI,TAU);ctx.fill();
+    ctx.restore();
+  }
+  // grenades in flight
+  for(const g of S.gr){
+    const k=g.t/g.dur,x=g.sx+(g.tx-g.sx)*k,y=g.sy+(g.ty-g.sy)*k-Math.sin(Math.PI*k)*70;
+    ctx.fillStyle='#2b3238';ctx.strokeStyle='#e5533d';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,7,0,TAU);ctx.fill();ctx.stroke();
+  }
+  // explosions
+  for(const f of S.fx){
+    const k=1-f.t/f.max;
+    ctx.fillStyle='rgba(255,170,60,'+(.55*(1-k))+')';ctx.beginPath();ctx.arc(f.x,f.y,f.r*(.4+.6*k),0,TAU);ctx.fill();
+    ctx.strokeStyle='rgba(255,240,180,'+(1-k)+')';ctx.lineWidth=4;ctx.beginPath();ctx.arc(f.x,f.y,f.r*(.4+.6*k),0,TAU);ctx.stroke();
+  }
+  // particles
+  for(const q of S.part){
+    ctx.globalAlpha=clamp(q.t/q.max*1.5,0,1);ctx.fillStyle=q.c;ctx.fillRect(q.x-q.s/2,q.y-q.s/2,q.s,q.s);
+  }
+  ctx.globalAlpha=1;
+  // damage numbers
+  ctx.textAlign='center';
+  for(const t of S.txt){
+    ctx.globalAlpha=clamp(t.t*3,0,1);
+    ctx.font=(t.c?'900 17px':'700 12px')+' system-ui,sans-serif';
+    ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.7)';ctx.strokeText(t.s,t.x,t.y);
+    ctx.fillStyle=t.c?'#ffd24d':'#fff';ctx.fillText(t.s,t.x,t.y);
+  }
+  ctx.globalAlpha=1;
+}
+function drawHUD(){
+  const p=S.p,top=safeT;
+  // xp bar
+  ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,top,W,9);
+  ctx.fillStyle='#e8b330';ctx.fillRect(0,top,W*S.xp/S.xpNeed,9);
+  // level
+  ctx.textAlign='left';ctx.font='900 15px system-ui,sans-serif';
+  ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.7)';
+  ctx.strokeText('Lv.'+S.lvl,12,top+30);ctx.fillStyle='#ffe28a';ctx.fillText('Lv.'+S.lvl,12,top+30);
+  // hp bar
+  const hw=Math.min(150,W*.36),hy=top+40;
+  ctx.fillStyle='rgba(0,0,0,.55)';ctx.beginPath();ctx.roundRect(12,hy,hw,16,8);ctx.fill();
+  const hp=clamp(p.hp/p.maxHp,0,1);
+  ctx.fillStyle=hp<.3?'#ff4d4d':'#e5533d';ctx.beginPath();ctx.roundRect(12,hy,Math.max(10,hw*hp),16,8);ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='700 11px system-ui,sans-serif';ctx.textAlign='center';
+  ctx.fillText(Math.ceil(p.hp)+' / '+p.maxHp,12+hw/2,hy+12);
+  // kills
+  ctx.textAlign='left';ctx.font='700 13px system-ui,sans-serif';
+  ctx.strokeText('击杀 '+S.kills,12,hy+36);ctx.fillStyle='#dfe7ea';ctx.fillText('击杀 '+S.kills,12,hy+36);
+  ctx.font='700 13px system-ui,sans-serif';
+  const gtxt='🪙 '+Math.floor(S.gold)+(S.revive>0?'   ✨ ×'+S.revive:'');
+  ctx.strokeText(gtxt,12,hy+54);ctx.fillStyle='#ffe28a';ctx.fillText(gtxt,12,hy+54);
+  // timer
+  ctx.textAlign='center';ctx.font='900 26px system-ui,sans-serif';
+  ctx.strokeText(fmt(S.t),W/2,top+36);ctx.fillStyle='#fff';ctx.fillText(fmt(S.t),W/2,top+36);
+  // boss bar
+  const boss=S.en.find(e=>e.boss&&!e.dead);
+  if(boss){
+    const bw=Math.min(300,W*.62),bx=(W-bw)/2,by=top+50;
+    ctx.fillStyle='rgba(0,0,0,.6)';ctx.beginPath();ctx.roundRect(bx,by,bw,12,6);ctx.fill();
+    ctx.fillStyle='#e8b330';ctx.beginPath();ctx.roundRect(bx,by,Math.max(8,bw*Math.max(0,boss.hp/boss.maxHp)),12,6);ctx.fill();
+  }
+  // banner
+  if(S.bannerT>0){
+    ctx.globalAlpha=clamp(S.bannerT*2,0,1);
+    ctx.font='900 30px system-ui,sans-serif';ctx.textAlign='center';
+    ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.75)';ctx.strokeText(S.banner,W/2,H*.3);
+    ctx.fillStyle='#ffd24d';ctx.fillText(S.banner,W/2,H*.3);ctx.globalAlpha=1;
+  }
+  // damage vignette
+  const low=p.hp/p.maxHp<.3?(.12+.08*Math.sin(S.t*6)):0;
+  const va=Math.max(p.hurt/.3*.28,low);
+  if(va>0){
+    const g=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.3,W/2,H/2,Math.max(W,H)*.75);
+    g.addColorStop(0,'rgba(255,40,60,0)');g.addColorStop(1,'rgba(255,40,60,'+va+')');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  }
+  // joystick
+  if(joy.on){
+    ctx.globalAlpha=.55;
+    ctx.fillStyle='rgba(255,255,255,.12)';ctx.strokeStyle='rgba(255,255,255,.55)';ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(joy.ox,joy.oy,52,0,TAU);ctx.fill();ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.7)';ctx.beginPath();ctx.arc(joy.ox+joy.kx,joy.oy+joy.ky,22,0,TAU);ctx.fill();
+    ctx.globalAlpha=1;
+  }
+}
+function render(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.fillStyle='#232b2f';ctx.fillRect(0,0,W,H);
+  ctx.setTransform(DPR*Z,0,0,DPR*Z,0,0);
+  let cx,cy;
+  if(S){
+    cx=S.cam.x+(Math.random()-.5)*S.shake;cy=S.cam.y+(Math.random()-.5)*S.shake;
+  }else{cx=idleT*22;cy=idleT*7}
+  ctx.save();ctx.translate(-cx,-cy);
+  drawWorld(cx,cy);
+  ctx.restore();
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  if(S&&(mode==='play'||mode==='levelup'||mode==='pause'))drawHUD();
+}
+
+/* ---------- level up ---------- */
+function genChoices(){
+  const pool=shuffle(UPS.filter(u=>(S.up[u.id]||0)<u.max));
+  const ch=pool.slice(0,3);
+  if(ch.length<3){
+    const ext=shuffle(ENDLESS.concat([HEAL]));
+    for(const x of ext){if(ch.length>=3)break;ch.push(x)}
+  }
+  return ch;
+}
+function applyChoice(c){
+  c.apply(S.p);
+  if(c.id!=='heal')S.up[c.id]=(S.up[c.id]||0)+1;
+  S.pending--;
+}
+function openUpgradeWindow(){
+  if(mode!=='play'||!S)return;
+  if(S.pending<=0){banner('暂无可用强化');return}
+  openLevelUp();
+}
+function closeLevelUp(){
+  $('levelup').classList.remove('show');
+  mode='play';last=performance.now();
+}
+function autoUpgrade(){
+  if(mode!=='levelup'||performance.now()-lvOpenAt<350)return;
+  let n=0;
+  while(S.pending>0){
+    const ch=genChoices(),nh=ch.filter(c=>c.id!=='heal'),src=nh.length?nh:ch;
+    applyChoice(src[(Math.random()*src.length)|0]);n++;
+  }
+  closeLevelUp();
+  sfx(660,.2,'triangle',.05,300);
+  banner('一键完成 '+n+' 次强化');
+}
+function openLevelUp(){
+  mode='levelup';joy.x=joy.y=0;joy.on=false;
+  choices=genChoices();
+  $('lvnum').textContent=S.lvl-S.pending+1;
+  $('lvSub').textContent='选一项强化'+(S.pending>1?'（还剩 '+S.pending+' 次）':'');
+  $('btnAuto').textContent=S.pending>1?'一键升级 ×'+S.pending:'随机强化';
+  $('cards').innerHTML=choices.map((c,i)=>{
+    const cur=S.up[c.id]||0;
+    const tag=c.id==='heal'?'':(cur===0?'新':'Lv '+cur+' → '+(cur+1));
+    return '<button class="card" data-i="'+i+'"><span class="ic">'+c.icon+'</span><span class="tx"><b>'+c.name+'</b><i>'+c.desc+'</i></span><span class="lv">'+tag+'</span></button>';
+  }).join('');
+  const own=UPS.concat(ENDLESS).filter(u=>S.up[u.id]).map(u=>'<span>'+u.icon+' '+u.name+' ×'+S.up[u.id]+'</span>').join('');
+  $('owned').innerHTML=own;
+  lvOpenAt=performance.now();
+  $('levelup').classList.add('show');
+  sfx(520,.12,'square',.03,300);
+}
+function pick(i){
+  if(mode!=='levelup'||performance.now()-lvOpenAt<350)return;
+  const c=choices[i];if(!c)return;
+  applyChoice(c);
+  $('levelup').classList.remove('show');
+  sfx(660,.12,'triangle',.04,200);
+  if(S.pending>0)openLevelUp();else closeLevelUp();
+}
+$('btnAuto').onclick=autoUpgrade;
+$('btnLater').onclick=()=>{if(mode==='levelup')closeLevelUp()};
+$('upbtn').onclick=openUpgradeWindow;
+$('cards').addEventListener('click',e=>{
+  const b=e.target.closest('.card');if(b)pick(+b.dataset.i);
+});
+
+/* ---------- menu / flow ---------- */
+function buildChars(){
+  $('chars').innerHTML=CHARS.map((c,i)=>{
+    const open=SAVE.unlock[i],lv=charInfo(i).lv;
+    return '<button class="ch'+(i===selChar?' sel':'')+(open?'':' lock')+'" data-i="'+i+'"><span class="lvb">Lv.'+lv+'</span><div class="av" style="background:'+c.color+'"></div><b>'+c.name+'</b><span class="role">'+c.role+'</span><span class="d">'+c.desc.replace('\n','<br>')+'</span>'+(open?'':'<span class="cost">🔒 '+UNLOCK[i]+'</span>')+'</button>';
+  }).join('');
+}
+function renderCharInfo(){
+  const c=CHARS[selChar],ci=charInfo(selChar),eq=SAVE.equip.weapon;
+  const pct=ci.need?Math.round(ci.xp/ci.need*100):100;
+  const wOpen=ci.lv>=EX_W_LV,sOpen=ci.lv>=EX_S_LV,exOn=eq==='ex'&&wOpen;
+  const wBtn=wOpen?'<button class="mini'+(exOn?' off':'')+'" data-a="exw">'+(exOn?'卸下':'装备')+'</button>':'<span class="mini off">🔒 Lv.'+EX_W_LV+'</span>';
+  const sTag=sOpen?'<span class="mini off">已解锁</span>':'<span class="mini off">🔒 Lv.'+EX_S_LV+'</span>';
+  $('charInfo').innerHTML=
+    '<div class="top"><span>'+c.name+' · Lv.'+ci.lv+(ci.lv>=MAXLV?'（满级）':'')+'</span><small>'+(ci.need?ci.xp+' / '+ci.need+' 经验':'MAX')+'</small></div>'+
+    '<div class="xpbar"><i style="width:'+pct+'%"></i></div>'+
+    '<div class="cline"><span>🔫</span><div class="tx"><b>专属武器 · '+c.ex.name+'</b><i>'+c.ex.desc+'</i></div>'+wBtn+'</div>'+
+    '<div class="cline"><span>'+c.skill.icon+'</span><div class="tx"><b>专属技能 · '+c.skill.name+'</b><i>'+c.skill.desc+'（冷却 '+c.skill.cd+' 秒）</i></div>'+sTag+'</div>'+
+    '<div class="cline"><span>📈</span><div class="tx"><b>等级加成</b><i>伤害 +'+((ci.lv-1)*2)+'%　最大生命 +'+((ci.lv-1)*3)+'</i></div></div>';
+}
+$('charInfo').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-a="exw"]');if(!b)return;
+  SAVE.equip.weapon=SAVE.equip.weapon==='ex'?null:'ex';
+  persist();renderCharInfo();sfx(520,.1,'triangle',.04,150);
+});
+function updateStartBtn(){
+  $('btnStart').textContent=SAVE.unlock[selChar]?'开始作战':'解锁 '+CHARS[selChar].name+' · 🪙 '+UNLOCK[selChar];
+}
+function refreshMenu(){
+  $('gold').textContent=SAVE.gold;
+  $('best').textContent=SAVE.best>0?'最佳存活 '+fmt(SAVE.best)+(SAVE.runs?' · 已出战 '+SAVE.runs+' 局':''):'';
+  buildChars();renderCharInfo();updateStartBtn();
+}
+$('chars').addEventListener('click',e=>{
+  const b=e.target.closest('.ch');if(!b)return;
+  selChar=+b.dataset.i;buildChars();renderCharInfo();updateStartBtn();
+});
+function showMenu(){
+  mode='menu';S=null;
+  ['levelup','pause','over'].forEach(id=>$(id).classList.remove('show'));
+  $('tools').classList.remove('show');
+  $('shop').classList.remove('show');$('redeem').classList.remove('show');
+  $('bag').classList.remove('show');$('store').classList.remove('show');
+  $('menu').classList.add('show');
+  refreshMenu();
+}
+function startRun(){
+  if(!SAVE.unlock[selChar])selChar=0;
+  newRun(selChar);
+  ['menu','levelup','pause','over','shop','bag','store','redeem'].forEach(id=>$(id).classList.remove('show'));
+  $('tools').classList.add('show');
+  mode='play';last=performance.now();
+  sfx(440,.15,'square',.03,200);
+}
+function setPause(on){
+  if(on&&mode==='play'){mode='pause';joy.on=false;joy.x=joy.y=0;$('pause').classList.add('show')}
+  else if(!on&&mode==='pause'){mode='play';last=performance.now();$('pause').classList.remove('show')}
+}
+$('btnStart').onclick=()=>{
+  if(SAVE.unlock[selChar]){startRun();return}
+  const c=UNLOCK[selChar];
+  if(SAVE.gold>=c){
+    SAVE.gold-=c;SAVE.unlock[selChar]=true;persist();
+    refreshMenu();sfx(660,.2,'triangle',.05,300);
+  }else{
+    $('btnStart').textContent='金币不足，先去打几局吧';
+    setTimeout(updateStartBtn,1300);sfx(150,.15,'sawtooth',.04);
+  }
+};
+$('btnRetry').onclick=startRun;
+$('btnMenu').onclick=showMenu;
+$('btnQuit').onclick=()=>{settleGold();showMenu()};
+
+let shopFrom='menu';
+function renderShop(){
+  $('gold2').textContent=SAVE.gold;
+  $('shopList').innerHTML=META.map(m=>{
+    const l=SAVE.up[m.id]||0,maxed=l>=m.max,c=metaCost(m,l);
+    const pips=Array.from({length:m.max},(_,i)=>'<u class="'+(i<l?'on':'')+'"></u>').join('');
+    const btn=maxed?'<span class="buy max">已满级</span>':'<button class="buy'+(SAVE.gold<c?' off':'')+'" data-id="'+m.id+'">🪙 '+c+'</button>';
+    return '<div class="item"><span class="ic">'+m.icon+'</span><div class="tx"><b>'+m.name+'<small>Lv '+l+'/'+m.max+'</small></b><i>'+m.desc+(l?'　当前 '+m.eff(l):'')+'</i><div class="pips">'+pips+'</div></div>'+btn+'</div>';
+  }).join('');
+}
+function showShop(from){
+  shopFrom=from;
+  $('menu').classList.remove('show');$('over').classList.remove('show');
+  renderShop();$('shop').classList.add('show');
+}
+$('shopList').addEventListener('click',e=>{
+  const b=e.target.closest('button.buy');if(!b)return;
+  const m=META.find(x=>x.id===b.dataset.id);if(!m)return;
+  const l=SAVE.up[m.id]||0,c=metaCost(m,l);
+  if(l>=m.max)return;
+  if(SAVE.gold<c){sfx(150,.15,'sawtooth',.04);return}
+  SAVE.gold-=c;SAVE.up[m.id]=l+1;persist();
+  sfx(660,.12,'triangle',.04,250);renderShop();
+});
+/* ---------- redeem codes ---------- */
+// 规则：DH + 数字 = 获得对应数量的金币（如 DH100 = 100 金币）。新增规则在这里扩展。
+function parseRedeem(raw){
+  const c=String(raw||'').trim().toUpperCase().replace(/\s+/g,'');
+  const m=/^DH(\d{1,9})$/.exec(c);
+  if(m){const n=parseInt(m[1],10);if(n>0)return{gold:n}}
+  return null;
+}
+function doRedeem(){
+  const inp=$('codeInput'),msg=$('codeMsg');
+  const r=parseRedeem(inp.value);
+  if(!r){
+    msg.textContent='兑换码无效，请检查后重试';msg.className='msg bad';
+    sfx(150,.15,'sawtooth',.04);return;
+  }
+  SAVE.gold+=r.gold;persist();
+  msg.textContent='兑换成功！获得 '+r.gold+' 🪙';msg.className='msg ok';
+  inp.value='';$('gold3').textContent=SAVE.gold;
+  sfx(660,.2,'triangle',.05,300);
+}
+$('btnCode').onclick=()=>{
+  $('menu').classList.remove('show');
+  $('gold3').textContent=SAVE.gold;
+  $('codeMsg').textContent='';$('codeMsg').className='msg';
+  $('redeem').classList.add('show');
+  setTimeout(()=>{try{$('codeInput').focus()}catch(e){}},50);
+};
+$('btnRedeem').onclick=doRedeem;
+$('codeInput').addEventListener('keydown',e=>{if(e.key==='Enter')doRedeem()});
+$('btnRedeemBack').onclick=()=>{
+  $('redeem').classList.remove('show');
+  $('menu').classList.add('show');refreshMenu();
+};
+
+$('btnShop').onclick=()=>showShop('menu');
+$('btnShopOver').onclick=()=>showShop('over');
+$('btnShopBack').onclick=()=>{
+  $('shop').classList.remove('show');
+  if(shopFrom==='over'){$('over').classList.add('show');$('overGold').textContent='共 '+SAVE.gold+' 🪙'}
+  else{$('menu').classList.add('show');refreshMenu()}
+};
+/* ---------- 装备背包 / 补给站 ---------- */
+let panelFrom='menu';
+function openPanel(id,from){
+  panelFrom=from;
+  $('menu').classList.remove('show');$('over').classList.remove('show');
+  $(id).classList.add('show');
+}
+function closePanel(id){
+  $(id).classList.remove('show');
+  if(panelFrom==='over'){$('over').classList.add('show');$('overGold').textContent='共 '+SAVE.gold+' 🪙'}
+  else{$('menu').classList.add('show');refreshMenu()}
+}
+const bag={view:'list',filter:'all',id:null,sock:0,msg:'',cls:'',confirm:false,bulk:0};
+// 一键分解：品质 ≤ n，且未装备、未强化、未镶嵌
+function bulkList(n){
+  return SAVE.items.filter(it=>it.g<=n&&SAVE.equip[it.slot]!==it.id&&it.enh===0&&!it.gems.some(Boolean));
+}
+function pipsHtml(n,max){
+  let h='';for(let i=0;i<max;i++)h+='<u class="'+(i<n?'on':'')+'"></u>';
+  return h;
+}
+function renderBag(){
+  const eq=SAVE.equip;let h='';
+  const msg=bag.msg?'<div class="msg '+bag.cls+'" style="min-height:0;margin:8px 0">'+bag.msg+'</div>':'';
+  if(bag.view==='list'){
+    const exActive=eq.weapon==='ex'&&charInfo(selChar).lv>=EX_W_LV;
+    h+='<h2>装备</h2><div class="wallet">🪙 '+SAVE.gold+'</div>'+msg;
+    h+='<div class="slots">'+SLOTS.map(k=>{
+      let nm='空',col='var(--muted)';
+      if(k==='weapon'&&exActive){nm='专属<br>'+CHARS[selChar].ex.name;col='var(--brass)'}
+      else{
+        const it=k==='weapon'&&eq.weapon==='ex'?null:getItem(eq[k]);
+        if(it){nm=TYPES[it.type].name+(it.enh?' +'+it.enh:'');col=GR[it.g-1].c}
+        else if(k==='weapon')nm='默认武器';
+      }
+      return '<button class="slot'+(bag.filter===k?' on':'')+'" data-a="slot" data-k="'+k+'"><span class="ic">'+SLOT_I[k]+'</span><span class="nm" style="color:'+col+'">'+nm+'</span><span class="lb">'+SLOT_N[k]+'</span></button>';
+    }).join('')+'</div>';
+    h+='<div class="tabs">'+['all'].concat(SLOTS).map(k=>'<button class="chip'+(bag.filter===k?' on':'')+'" data-a="tab" data-k="'+k+'">'+(k==='all'?'全部':SLOT_N[k])+'</button>').join('')+'</div>';
+    if(SAVE.items.length){
+      h+='<div class="sec" style="margin:4px 0 6px">一键分解（保留已装备、已强化、已镶嵌）</div><div class="tabs">'+[1,2,3].map(n=>{
+        const l=bulkList(n),v=l.reduce((x,it)=>x+sellVal(it),0),conf=bag.bulk===n&&l.length>0;
+        return '<button class="chip'+(conf?' on':'')+'" data-a="bulk" data-g="'+n+'">'+(conf?'确认分解 '+l.length+' 件 +🪙'+v:'≤'+GR[n-1].n+'（'+l.length+'）')+'</button>';
+      }).join('')+'</div>';
+    }
+    if(bag.filter==='weapon'){
+      const c=CHARS[selChar],open=charInfo(selChar).lv>=EX_W_LV;
+      h+='<button class="irow" data-a="wdef"><span class="ic">🔫</span><div class="tx"><b>角色默认武器</b><i>'+CHARS[selChar].role+'</i></div><span class="tg">'+(eq.weapon===null?'使用中':'')+'</span></button>';
+      h+='<button class="irow" data-a="wex"><span class="ic">⭐</span><div class="tx"><b style="color:var(--brass)">专属 · '+c.ex.name+'</b><i>'+(open?c.ex.desc:c.name+' Lv.'+EX_W_LV+' 解锁')+'</i></div><span class="tg">'+(exActive?'使用中':(open?'':'🔒'))+'</span></button>';
+    }
+    const list=SAVE.items.filter(it=>bag.filter==='all'||it.slot===bag.filter).sort((a,b)=>b.g-a.g||b.enh-a.enh||b.id-a.id);
+    if(!list.length)h+='<div class="hint">这里还没有装备。去补给站开箱，或在战斗中存活 / 击败首领获得。</div>';
+    for(const it of list){
+      const on=eq[it.slot]===it.id,filled=it.gems.filter(Boolean).length;
+      h+='<button class="irow" data-a="item" data-id="'+it.id+'"><span class="ic">'+SLOT_I[it.slot]+'</span><div class="tx"><b>'+itemName(it)+'</b><i>'+itemLines(it)[0]+'　💎 '+filled+'/'+it.gems.length+'</i></div><span class="tg">'+(on?'已装备':'')+'</span></button>';
+    }
+    h+='<div class="hint">背包 '+SAVE.items.length+' / '+BAG_MAX+'　品质越高，可强化次数和宝石孔越多</div>';
+    h+='<button class="btn" data-a="close" style="margin-top:10px">返回</button>';
+  }else{
+    const it=getItem(bag.id);
+    if(!it){bag.view='list';return renderBag()}
+    const g=GR[it.g-1],T=TYPES[it.type],eqd=eq[it.slot]===it.id;
+    if(bag.view==='item'){
+      const can=it.enh<g.enh,filled=it.gems.filter(Boolean).length;
+      h+='<h2 style="color:'+g.c+'">'+T.name+(it.enh?' +'+it.enh:'')+'</h2>';
+      h+='<div class="sub" style="margin:0">'+g.n+'品质 · '+SLOT_N[it.slot]+(eqd?' · 已装备':'')+'</div>'+msg;
+      h+='<div class="dtl">'+itemLines(it).join('<br>')+'</div>';
+      h+='<div class="sec">强化 '+it.enh+' / '+g.enh+'</div><div class="pips" style="justify-content:center">'+pipsHtml(it.enh,g.enh)+'</div>';
+      h+=can?'<button class="btn" data-a="enh" style="margin-top:12px">强化 · 🪙 '+enhCost(it)+'</button>':'<div class="hint">已强化到上限</div>';
+      h+='<div class="sec">宝石孔 '+filled+' / '+g.sock+'</div><div class="sockets">'+it.gems.map((x,i)=>x?
+        '<button class="sock full" data-a="sock" data-i="'+i+'">'+GEMS[x.t].icon+'<small>Lv'+x.l+'</small></button>':
+        '<button class="sock" data-a="sock" data-i="'+i+'">＋</button>').join('')+'</div>';
+      h+='<div class="row2"><button class="btn" data-a="equip">'+(eqd?'卸下':'装备')+'</button><button class="btn alt" data-a="sell">'+(bag.confirm?'确认分解':'分解 +'+sellVal(it))+'</button></div>';
+      h+='<button class="btn alt" data-a="back" style="margin-top:12px">返回</button>';
+    }else{
+      const cur=it.gems[bag.sock];
+      h+='<h2>镶嵌宝石</h2><div class="sub" style="margin:0">'+itemName(it)+' · 第 '+(bag.sock+1)+' 孔</div>'+msg;
+      if(cur){
+        const gd=GEMS[cur.t];
+        h+='<div class="cards"><button class="card" data-a="ungem"><span class="ic">'+gd.icon+'</span><span class="tx"><b>卸下 '+gd.n+' Lv'+cur.l+'</b><i>宝石会返还到库存</i></span></button></div>';
+      }
+      const keys=Object.keys(SAVE.gems).filter(k=>SAVE.gems[k]>0&&GEMS[k.slice(0,-1)]).sort();
+      h+='<div class="sec">库存宝石</div>';
+      if(!keys.length)h+='<div class="hint">没有宝石，去补给站购买。</div>';
+      else h+='<div class="cards">'+keys.map(k=>{
+        const gd=GEMS[k.slice(0,-1)],l=+k.slice(-1);
+        return '<button class="card" data-a="setgem" data-k="'+k+'"><span class="ic">'+gd.icon+'</span><span class="tx"><b>'+gd.n+' Lv'+l+'</b><i>'+gd.label+' '+statText(gd.stat,gd.v[l-1])+'</i></span><span class="lv">×'+SAVE.gems[k]+'</span></button>';
+      }).join('')+'</div>';
+      h+='<button class="btn alt" data-a="backitem" style="margin-top:16px">返回</button>';
+    }
+  }
+  $('bagBox').innerHTML=h;
+}
+$('bagBox').addEventListener('click',e=>{
+  const b=e.target.closest('[data-a]');if(!b)return;
+  const a=b.dataset.a,eq=SAVE.equip;
+  bag.msg='';bag.cls='';
+  if(a!=='bulk')bag.bulk=0;
+  if(a==='close'){closePanel('bag');return}
+  if(a!=='sell')bag.confirm=false;
+  const it=getItem(bag.id);
+  if(a==='tab')bag.filter=b.dataset.k;
+  else if(a==='slot'){
+    const k=b.dataset.k,cur=(k==='weapon'&&eq.weapon==='ex')?null:getItem(eq[k]);
+    if(cur){bag.view='item';bag.id=cur.id}else bag.filter=k;
+  }
+  else if(a==='item'){bag.view='item';bag.id=+b.dataset.id}
+  else if(a==='wdef'){eq.weapon=null;persist()}
+  else if(a==='wex'){
+    if(charInfo(selChar).lv<EX_W_LV){bag.msg=CHARS[selChar].name+' 达到 Lv.'+EX_W_LV+' 后解锁专属武器';bag.cls='bad'}
+    else{eq.weapon='ex';persist();sfx(520,.1,'triangle',.04,150)}
+  }
+  else if(a==='bulk'){
+    const n=+b.dataset.g,list=bulkList(n);
+    if(!list.length){bag.msg='没有符合条件的装备';bag.cls='bad';bag.bulk=0}
+    else if(bag.bulk!==n){bag.bulk=n}
+    else{
+      let tot=0;for(const it of list)tot+=sellVal(it);
+      const ids=new Set(list.map(x=>x.id));
+      SAVE.gold+=tot;SAVE.items=SAVE.items.filter(x=>!ids.has(x.id));persist();
+      bag.bulk=0;bag.msg='已分解 '+list.length+' 件，获得 🪙 '+tot;bag.cls='ok';
+      sfx(400,.15,'triangle',.04,-100);
+    }
+  }
+  else if(a==='back'){bag.view='list'}
+  else if(a==='backitem'){bag.view='item'}
+  else if(a==='equip'&&it){eq[it.slot]=eq[it.slot]===it.id?null:it.id;persist();sfx(520,.1,'triangle',.04,150)}
+  else if(a==='enh'&&it){
+    const g=GR[it.g-1];
+    if(it.enh>=g.enh){}
+    else{
+      const c=enhCost(it);
+      if(SAVE.gold<c){bag.msg='金币不足';bag.cls='bad';sfx(150,.15,'sawtooth',.04)}
+      else{SAVE.gold-=c;it.enh++;persist();bag.msg='强化成功！';bag.cls='ok';sfx(660,.12,'triangle',.04,250)}
+    }
+  }
+  else if(a==='sell'&&it){
+    if(eq[it.slot]===it.id){bag.msg='请先卸下装备再分解';bag.cls='bad'}
+    else if(!bag.confirm){bag.confirm=true}
+    else{
+      const v=sellVal(it);
+      for(const gm of it.gems)if(gm){const k=gm.t+gm.l;SAVE.gems[k]=(SAVE.gems[k]||0)+1}
+      SAVE.gold+=v;SAVE.items=SAVE.items.filter(x=>x.id!==it.id);persist();
+      bag.view='list';bag.confirm=false;bag.msg='已分解，获得 🪙 '+v+'，宝石已返还';bag.cls='ok';
+      sfx(400,.12,'triangle',.04,-100);
+    }
+  }
+  else if(a==='sock'){bag.view='gem';bag.sock=+b.dataset.i}
+  else if(a==='ungem'&&it){
+    const cur=it.gems[bag.sock];
+    if(cur){const k=cur.t+cur.l;SAVE.gems[k]=(SAVE.gems[k]||0)+1;it.gems[bag.sock]=null;persist()}
+    bag.view='item';
+  }
+  else if(a==='setgem'&&it){
+    const k=b.dataset.k,t=k.slice(0,-1),l=+k.slice(-1);
+    if((SAVE.gems[k]||0)>0&&GEMS[t]){
+      const cur=it.gems[bag.sock];
+      if(cur){const ck=cur.t+cur.l;SAVE.gems[ck]=(SAVE.gems[ck]||0)+1}
+      SAVE.gems[k]--;it.gems[bag.sock]={t,l};persist();
+      sfx(700,.1,'sine',.04,200);
+    }
+    bag.view='item';
+  }
+  renderBag();
+});
+const store={msg:'',cls:''};
+function renderStore(){
+  let h='<h2>补给站</h2><div class="wallet">🪙 '+SAVE.gold+'</div>';
+  if(store.msg)h+='<div class="msg '+store.cls+'" style="min-height:0;margin:8px 0">'+store.msg+'</div>';
+  h+='<div class="sec">补给箱（背包 '+SAVE.items.length+' / '+BAG_MAX+'）</div><div class="shop-list">'+BOX.map((b,i)=>
+    '<div class="item"><span class="ic">'+b.icon+'</span><div class="tx"><b>'+b.n+'</b><i>'+b.desc+'</i></div><button class="buy'+(SAVE.gold<b.price?' off':'')+'" data-a="box" data-i="'+i+'">🪙 '+b.price+'</button></div>'
+  ).join('')+'</div>';
+  h+='<div class="sec">宝石</div><div class="shop-list">'+Object.keys(GEMS).map(t=>{
+    const gd=GEMS[t];
+    return '<div class="item"><span class="ic">'+gd.icon+'</span><div class="tx"><b>'+gd.n+'</b><i>'+gd.label+' '+gd.v.map(v=>statText(gd.stat,v)).join(' / ')+'</i><i>库存 '+[1,2,3].map(l=>'Lv'+l+'×'+(SAVE.gems[t+l]||0)).join('　')+'</i></div><div class="gbtns">'+
+      [1,2,3].map(l=>'<button class="buy'+(SAVE.gold<GEM_COST[l-1]?' off':'')+'" style="min-width:0;padding:8px 7px;font-size:12px" data-a="gem" data-k="'+t+l+'">Lv'+l+'<br>🪙'+GEM_COST[l-1]+'</button>').join('')+'</div></div>';
+  }).join('')+'</div>';
+  h+='<button class="btn" data-a="close" style="margin-top:6px">返回</button>';
+  $('storeBox').innerHTML=h;
+}
+$('storeBox').addEventListener('click',e=>{
+  const b=e.target.closest('[data-a]');if(!b)return;
+  const a=b.dataset.a;
+  store.msg='';store.cls='';
+  if(a==='close'){closePanel('store');return}
+  if(a==='box'){
+    const bx=BOX[+b.dataset.i];
+    if(SAVE.items.length>=BAG_MAX){store.msg='背包已满，请先分解一些装备';store.cls='bad'}
+    else if(SAVE.gold<bx.price){store.msg='金币不足';store.cls='bad';sfx(150,.15,'sawtooth',.04)}
+    else{
+      SAVE.gold-=bx.price;
+      const it=rollItem(rollGrade(bx.w));
+      SAVE.items.push(it);persist();
+      store.msg='获得 '+itemName(it)+'（'+SLOT_N[it.slot]+'）';store.cls='ok';
+      sfx(520+it.g*80,.25,'triangle',.05,300);
+    }
+  }else if(a==='gem'){
+    const k=b.dataset.k,l=+k.slice(-1),c=GEM_COST[l-1];
+    if(SAVE.gold<c){store.msg='金币不足';store.cls='bad';sfx(150,.15,'sawtooth',.04)}
+    else{
+      SAVE.gold-=c;SAVE.gems[k]=(SAVE.gems[k]||0)+1;persist();
+      store.msg='获得 '+GEMS[k.slice(0,-1)].n+' Lv'+l;store.cls='ok';sfx(700,.1,'sine',.04,200);
+    }
+  }
+  renderStore();
+});
+function showBag(from){bag.view='list';bag.msg='';bag.confirm=false;renderBag();openPanel('bag',from)}
+function showStore(from){store.msg='';renderStore();openPanel('store',from)}
+$('btnBag').onclick=()=>showBag('menu');
+$('btnStore').onclick=()=>showStore('menu');
+$('btnBagOver').onclick=()=>showBag('over');
+$('btnStoreOver').onclick=()=>showStore('over');
+$('skbtn').onclick=castSkill;
+
+$('btnResume').onclick=()=>setPause(false);
+$('btnPause').onclick=()=>setPause(true);
+$('btnSnd').onclick=()=>{muted=!muted;$('btnSnd').textContent=muted?'🔇':'🔊'};
+document.addEventListener('visibilitychange',()=>{if(document.hidden)setPause(true)});
+
+/* ---------- input ---------- */
+window.addEventListener('keydown',e=>{
+  if(e.target&&e.target.tagName==='INPUT')return;
+  keys[e.code]=true;
+  if(e.code==='Escape'||e.code==='KeyP'){if(mode==='play')setPause(true);else if(mode==='pause')setPause(false)}
+  if(mode==='levelup'&&['Digit1','Digit2','Digit3'].includes(e.code))pick(+e.code.slice(-1)-1);
+  if(mode==='play'&&e.code==='KeyU')openUpgradeWindow();
+  if(mode==='play'&&(e.code==='Space'||e.code==='KeyE'))castSkill();
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
+});
+window.addEventListener('keyup',e=>{keys[e.code]=false});
+window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false});
+
+cv.addEventListener('pointerdown',e=>{
+  if(mode!=='play'||joy.on)return;
+  joy.on=true;joy.id=e.pointerId;joy.ox=e.clientX;joy.oy=e.clientY;joy.x=joy.y=joy.kx=joy.ky=0;
+  try{cv.setPointerCapture(e.pointerId)}catch(_){}
+  if(AC&&AC.state==='suspended')AC.resume();
+});
+cv.addEventListener('pointermove',e=>{
+  if(!joy.on||e.pointerId!==joy.id)return;
+  let dx=e.clientX-joy.ox,dy=e.clientY-joy.oy;
+  const len=Math.hypot(dx,dy),R=52;
+  if(len>R*1.7){const f=(len-R*1.7)/len;joy.ox+=dx*f;joy.oy+=dy*f;dx=e.clientX-joy.ox;dy=e.clientY-joy.oy}
+  const l2=Math.hypot(dx,dy)||1,v=Math.min(l2,R);
+  joy.kx=dx/l2*v;joy.ky=dy/l2*v;
+  const mag=v/R;
+  joy.x=(dx/l2)*(mag<.12?0:mag);joy.y=(dy/l2)*(mag<.12?0:mag);
+});
+function endJoy(e){
+  if(e.pointerId!==joy.id)return;
+  joy.on=false;joy.x=joy.y=joy.kx=joy.ky=0;joy.id=null;
+}
+cv.addEventListener('pointerup',endJoy);
+cv.addEventListener('pointercancel',endJoy);
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+
+/* ---------- loop ---------- */
+let last=performance.now();
+let upShow=null,upPend=-1;
+function updateUpBtn(){
+  const show=mode==='play'&&!!S,pend=show?S.pending:0;
+  if(show!==upShow){upShow=show;$('upbtn').classList.toggle('show',show)}
+  if(pend!==upPend){upPend=pend;$('upBadge').textContent=pend;$('upbtn').classList.toggle('ready',pend>0)}
+}
+let skShow=null,skTxt='';
+function updateSkillBtn(){
+  const show=mode==='play'&&!!S&&!!S.skill;
+  if(show!==skShow){skShow=show;$('skbtn').classList.toggle('show',show);if(show){$('skIcon').textContent=S.skill.icon;skTxt=''}}
+  if(show){
+    const cd=Math.max(0,S.skillT),t=cd>0?Math.ceil(cd)+'s':S.skill.name;
+    if(t!==skTxt){skTxt=t;$('skTxt').textContent=t}
+    $('skbtn').classList.toggle('ready',cd<=0);
+    $('skbtn').classList.toggle('cool',cd>0);
+  }
+}
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(mode==='menu')idleT+=dt;
+  if(mode==='play'&&S)update(dt);
+  render();updateUpBtn();updateSkillBtn();
+  requestAnimationFrame(frame);
+}
+refreshMenu();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
