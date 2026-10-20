@@ -22,4 +22,4 @@
 
 ## 在线试玩
 
-访问 GitHub Pages 地址：`https://<你的用户名>.github.io/shellstorm/`
+访问 GitHub Pages 地址：`https://gdtalentlee.github.io/shellstorm/`
